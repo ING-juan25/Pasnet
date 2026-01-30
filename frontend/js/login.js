@@ -4,7 +4,7 @@ const error = document.getElementById('error');
 form.addEventListener('submit', e => {
   e.preventDefault();
 
-  fetch('/login', {
+  fetch('https://pasnet-backend.onrender.com/login', {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -15,7 +15,7 @@ form.addEventListener('submit', e => {
   })
   .then(res => {
     if (!res.ok) throw new Error();
-    location.href = '/admin.html';
+    location.href = 'admin.html';
   })
   .catch(() => {
     error.textContent = '❌ Usuario o contraseña incorrectos';

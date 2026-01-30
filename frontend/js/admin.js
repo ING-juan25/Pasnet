@@ -2,7 +2,7 @@ const tabla = document.getElementById('tablaSolicitudes');
 const cards = document.getElementById('cardsSolicitudes');
 const logoutBtn = document.getElementById('logout');
 
-fetch('/solicitudes', {
+fetch('https://pasnet-backend.onrender.com/solicitudes', {
   credentials: 'include'
 })
 .then(res => {
@@ -40,6 +40,6 @@ fetch('/solicitudes', {
 });
 
 logoutBtn.addEventListener('click', () => {
-  fetch('/logout', { method: 'POST', credentials: 'include' })
+  fetch('https://pasnet-backend.onrender.com/logout', { method: 'POST', credentials: 'include' })
     .then(() => location.href = '/login.html');
 });

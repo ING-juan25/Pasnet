@@ -66,7 +66,7 @@ planForm.addEventListener('submit', async e => {
 
   /* ---- GUARDAR EN BASE DE DATOS ---- */
   try {
-    await fetch('http://localhost:3000/solicitud', {
+    await fetch('https://pasnet-backend.onrender.com/solicitud', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
