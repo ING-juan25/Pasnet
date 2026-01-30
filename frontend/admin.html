@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Panel Admin | Pasnet</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+
+<header class="topbar">
+  <h1>📡 Pasnet Admin</h1>
+  <button id="logout">Cerrar sesión</button>
+</header>
+
+<main class="container">
+
+  <section class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Plan</th>
+          <th>Nombre</th>
+          <th>Dirección</th>
+          <th>Teléfono</th>
+          <th>Comentario</th>
+          <th>Fecha</th>
+        </tr>
+      </thead>
+      <tbody id="tablaSolicitudes"></tbody>
+    </table>
+  </section>
+
+  <!-- Vista móvil -->
+  <section class="cards" id="cardsSolicitudes"></section>
+
+</main>
+
+<script src="js/admin.js"></script>
+</body>
+</html>
+

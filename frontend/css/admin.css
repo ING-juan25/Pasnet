@@ -1,0 +1,99 @@
+:root {
+  --neon: #00f7ff;
+  --bg: #050b14;
+  --card: #0b1623;
+  --text: #e6faff;
+}
+
+* {
+  box-sizing: border-box;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+body {
+  margin: 0;
+  background: radial-gradient(circle at top, #08131f, var(--bg));
+  color: var(--text);
+}
+
+/* HEADER */
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 25px;
+  border-bottom: 1px solid rgba(0,247,255,.2);
+}
+
+.topbar h1 {
+  font-size: 1.3rem;
+}
+
+.topbar button {
+  background: transparent;
+  border: 1px solid var(--neon);
+  color: var(--neon);
+  padding: 8px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+}
+
+/* CONTAINER */
+.container {
+  padding: 20px;
+}
+
+/* TABLE DESKTOP */
+.table-wrapper {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  padding: 12px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  text-align: left;
+  font-size: .9rem;
+}
+
+th {
+  color: var(--neon);
+}
+
+/* CARDS MOBILE */
+.cards {
+  display: none;
+  gap: 15px;
+}
+
+.card {
+  background: linear-gradient(145deg, #0b1623, #08101a);
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: 0 0 20px rgba(0,247,255,.08);
+}
+
+.card h3 {
+  margin: 0 0 6px;
+  color: var(--neon);
+}
+
+.card p {
+  margin: 4px 0;
+  font-size: .85rem;
+}
+
+/* RESPONSIVE */
+@media (max-width: 900px) {
+  table {
+    display: none;
+  }
+
+  .cards {
+    display: grid;
+  }
+}

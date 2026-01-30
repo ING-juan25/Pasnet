@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Planes Fibra Óptica</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- Fondo futurista -->
+<div class="bg-grid"></div>
+
+<section class="plans">
+  <h1>Internet Fibra Óptica</h1>
+
+  <div class="cards">
+    <div class="card" data-plan="Fibra 300 Mbps">
+      <h2>300 Mbps</h2>
+      <p class="price">$79.900</p>
+      <ul>
+        <li>Streaming 4K</li>
+        <li>Router incluido</li>
+        <li>Soporte 24/7</li>
+      </ul>
+      <button>Lo quiero</button>
+    </div>
+
+    <div class="card popular" data-plan="Fibra 600 Mbps">
+      <span class="tag">POPULAR</span>
+      <h2>600 Mbps</h2>
+      <p class="price">$99.900</p>
+      <ul>
+        <li>Gaming sin lag</li>
+        <li>WiFi 6</li>
+        <li>Soporte prioritario</li>
+      </ul>
+      <button>Lo quiero</button>
+    </div>
+
+    <div class="card" data-plan="Fibra 1 Giga">
+      <h2>1 GIGA</h2>
+      <p class="price">$129.900</p>
+      <ul>
+        <li>Velocidad extrema</li>
+        <li>Empresas y streamers</li>
+        <li>IP dinámica</li>
+      </ul>
+      <button>Lo quiero</button>
+    </div>
+  </div>
+</section>
+
+<!-- Separador futurista -->
+<section class="separator">
+  <div class="line"></div>
+  <span>PQR</span>
+  <div class="line"></div>
+</section>
+
+<!-- PQR -->
+<section class="pqr">
+  <h2>Petición · Queja · Reclamo</h2>
+  <form>
+    <input type="text" placeholder="Nombre completo" required>
+    <input type="email" placeholder="Correo electrónico" required>
+    <textarea placeholder="Describe tu solicitud..." required></textarea>
+    <button type="submit">Enviar PQR</button>
+  </form>
+</section>
+
+<!-- Modal -->
+<div class="modal" id="modal">
+  <div class="modal-content">
+    <span class="close">&times;</span>
+    <h3 id="selectedPlan"></h3>
+
+    <form id="planForm">
+    <input type="text" id="nombre" placeholder="Nombre completo" required>
+    <input type="text" id="direccion" placeholder="Dirección" required>
+    <input type="tel" id="telefono" placeholder="Teléfono" required>
+    <textarea id="comentario" placeholder="Comentario adicional"></textarea>
+
+    <button type="submit">Enviar por WhatsApp</button>
+</form>
+  </div>
+</div>
+<footer class="footer">
+  <p>© 2026 Pasnet · Todos los derechos reservados</p>
+
+  <!-- Enlace Admin -->
+  <a href="admin.html" class="admin-link">Panel Admin</a>
+</footer>
+
+<script src="js/script.js"></script>
+</body>
+</html>
+
+
+
