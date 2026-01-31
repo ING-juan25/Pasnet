@@ -7,7 +7,7 @@ const logoutBtn = document.getElementById('logout');
 /* =========================
    CARGAR SOLICITUDES
 ========================= */
-fetch(`${API}/solicitudes`, {
+fetch(`${API}/solicitudes.html`, {
   credentials: 'include'
 })
 .then(res => {
