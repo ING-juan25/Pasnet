@@ -5,6 +5,8 @@ const session = require('express-session');
 const path = require('path');
 
 const app = express();
+app.set('trust proxy', 1);
+
 
 /* =========================
    MIDDLEWARES
@@ -13,6 +15,7 @@ app.use(cors({
   origin: 'https://pasnet.netlify.app',
   credentials: true
 }));
+
 
 app.use(express.json());
 
@@ -48,11 +51,13 @@ app.use(session({
   secret: 'pasnet_secret_key',
   resave: false,
   saveUninitialized: false,
+  proxy: true,
   cookie: {
-    secure: true,       // 🔐 HTTPS (Render)
-    sameSite: 'none'    // 🌍 permite Netlify → Render
+    secure: true,
+    sameSite: 'none'
   }
 }));
+
 
 app.post('/logout', (req, res) => {
   req.session.destroy(() => {
