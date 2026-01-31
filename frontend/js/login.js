@@ -4,7 +4,7 @@ const error = document.getElementById('error');
 form.addEventListener('submit', e => {
   e.preventDefault();
 
-  fetch('https://pasnet-backend.onrender.com/login.html', {
+  fetch('https://pasnet-backend.onrender.com/login', {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
