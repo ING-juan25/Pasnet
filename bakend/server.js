@@ -10,7 +10,7 @@ const app = express();
    MIDDLEWARES
 ========================= */
 app.use(cors({
-  origin: true,
+  origin: 'https://pasnet.netlify.app',
   credentials: true
 }));
 
@@ -44,17 +44,15 @@ CREATE TABLE IF NOT EXISTS solicitudes (
 /* =========================
    LOGIN ADMIN
 ========================= */
-app.post('/login', (req, res) => {
-  const { user, password } = req.body;
-
-  if (user === 'admin' && password === 'pasnet123') {
-    req.session.auth = true;
-    console.log('🔐 Admin autenticado');
-    return res.json({ ok: true });
+app.use(session({
+  secret: 'pasnet_secret_key',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: true,       // 🔐 HTTPS (Render)
+    sameSite: 'none'    // 🌍 permite Netlify → Render
   }
-
-  res.status(401).json({ error: 'Credenciales incorrectas' });
-});
+}));
 
 app.post('/logout', (req, res) => {
   req.session.destroy(() => {
