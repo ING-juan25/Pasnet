@@ -1,26 +1,18 @@
-const API = 'https://pasnet-backend.onrender.com';
-
 const tabla = document.getElementById('tablaSolicitudes');
 const cards = document.getElementById('cardsSolicitudes');
 const logoutBtn = document.getElementById('logout');
 
-/* =========================
-   CARGAR SOLICITUDES
-========================= */
-fetch(`${API}/solicitudes.html`, {
+const API = 'https://pasnet-backend.onrender.com';
+
+fetch(`${API}/solicitudes`, {
   credentials: 'include'
 })
 .then(res => {
-  if (!res.ok) {
-    location.href = 'login.html';
-    return;
-  }
+  if (!res.ok) location.href = '/login.html';
   return res.json();
 })
 .then(data => {
   data.forEach(s => {
-
-    // TABLA DESKTOP
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${s.plan}</td>
@@ -32,7 +24,6 @@ fetch(`${API}/solicitudes.html`, {
     `;
     tabla.appendChild(tr);
 
-    // CARDS MOBILE
     const card = document.createElement('div');
     card.className = 'card';
     card.innerHTML = `
@@ -47,14 +38,9 @@ fetch(`${API}/solicitudes.html`, {
   });
 });
 
-/* =========================
-   LOGOUT
-========================= */
 logoutBtn.addEventListener('click', () => {
   fetch(`${API}/logout`, {
     method: 'POST',
     credentials: 'include'
-  }).then(() => {
-    location.href = 'login.html';
-  });
+  }).then(() => location.href = '/login.html');
 });

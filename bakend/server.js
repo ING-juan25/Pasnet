@@ -76,7 +76,7 @@ function auth(req, res, next) {
 /* =========================
    RUTAS
 ========================= */
-app.post('/solicitud', (req, res) => {
+app.post('/solicitudes', (req, res) => {
   const { plan, nombre, direccion, telefono, comentario } = req.body;
 
   db.run(
