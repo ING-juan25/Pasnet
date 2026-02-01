@@ -17,13 +17,16 @@ app.use(cors({
 app.use(express.json());
 
 app.use(session({
+  name: 'pasnet.sid',              // 👈 IMPORTANTE
   secret: 'pasnet_secret_key',
   resave: false,
   saveUninitialized: false,
+  rolling: true,                   // 👈 MANTIENE SESIÓN ACTIVA
   proxy: true,
   cookie: {
     secure: true,
-    sameSite: 'none'
+    sameSite: 'none',
+    maxAge: 1000 * 60 * 60 * 2      // 2 horas
   }
 }));
 
@@ -32,21 +35,38 @@ app.use(session({
 ========================= */
 const db = new sqlite3.Database('./database.db');
 
-db.run(`
-  CREATE TABLE IF NOT EXISTS solicitudes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    plan TEXT,
-    nombre TEXT,
-    direccion TEXT,
-    telefono TEXT,
-    comentario TEXT,
-    fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
-    estado TEXT DEFAULT 'pendiente'
-  )
-`);
+db.serialize(() => {
+  db.run(`
+    CREATE TABLE IF NOT EXISTS solicitudes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      plan TEXT,
+      nombre TEXT,
+      direccion TEXT,
+      telefono TEXT,
+      comentario TEXT,
+      fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
+      estado TEXT DEFAULT 'pendiente'
+    )
+  `);
 
-// Asegura estado para registros antiguos
-db.run(`UPDATE solicitudes SET estado='pendiente' WHERE estado IS NULL`);
+  db.all(`PRAGMA table_info(solicitudes)`, (err, columns) => {
+    if (err) return console.error(err);
+
+    const existeEstado = columns.some(c => c.name === 'estado');
+
+    if (!existeEstado) {
+      db.run(
+        `ALTER TABLE solicitudes ADD COLUMN estado TEXT DEFAULT 'pendiente'`,
+        err => {
+          if (err) console.error('❌ Error creando columna estado', err);
+          else console.log('✅ Columna estado creada');
+        }
+      );
+    } else {
+      console.log('ℹ️ Columna estado ya existe');
+    }
+  });
+});
 
 /* =========================
    LOGIN ADMIN
@@ -65,6 +85,7 @@ app.post('/login', (req, res) => {
 
 app.post('/logout', (req, res) => {
   req.session.destroy(() => {
+    res.clearCookie('pasnet.sid');
     res.json({ ok: true });
   });
 });
@@ -134,5 +155,6 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Backend activo en puerto ${PORT}`);
 });
+
 
 
