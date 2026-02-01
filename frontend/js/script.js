@@ -8,7 +8,7 @@ const closeBtn = document.querySelector('.close');
 const planForm = document.getElementById('planForm');
 const separator = document.querySelector('.separator');
 
-const WHATSAPP_NUMBER = "573104063050"; // TU NÚMERO
+const WHATSAPP_NUMBER = "573015625633"; // TU NÚMERO
 let currentPlan = ""; // 👈 PLAN SELECCIONADO REAL
 
 /* =========================
