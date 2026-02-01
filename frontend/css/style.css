@@ -223,3 +223,67 @@ body {
   opacity: 1;
   text-shadow: 0 0 8px #00f7ff;
 }
+
+.hero-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin-bottom: 30px;
+}
+
+.hero-logo {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0,247,255,0.35), transparent 70%);
+  box-shadow:
+    0 0 25px rgba(0, 247, 255, 0.8),
+    0 0 50px rgba(0, 247, 255, 0.4);
+  animation: pulseGlow 3s infinite ease-in-out;
+}
+
+.hero-title h1 {
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #ffffff;
+  text-shadow:
+    0 0 12px rgba(0, 247, 255, 0.6),
+    0 0 24px rgba(0, 247, 255, 0.3);
+}
+
+/* ✨ Animación sutil futurista */
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow:
+      0 0 20px rgba(0, 247, 255, 0.6),
+      0 0 45px rgba(0, 247, 255, 0.3);
+  }
+  50% {
+    box-shadow:
+      0 0 35px rgba(0, 247, 255, 0.9),
+      0 0 70px rgba(0, 247, 255, 0.5);
+  }
+}
+
+/* 📱 Responsive fino */
+@media (max-width: 600px) {
+  .hero-title {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .hero-logo {
+    width: 60px;
+    height: 60px;
+  }
+}
+.hero-logo:hover {
+  transform: scale(1.10) rotate(2deg);
+  transition: transform 0.3s ease;
+}
+.hero-logo:active {
+  transform: scale(0.95) rotate(-2deg);
+  transition: transform 0.1s ease;
+}

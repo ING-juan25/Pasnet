@@ -67,6 +67,35 @@ db.serialize(() => {
     }
   });
 });
+db.run("DELETE FROM solicitudes");
+
+
+/* =========================
+   LIMPIEZA AUTOMÁTICA (15 DÍAS)
+========================= */
+
+const QUINCE_DIAS = 60 * 1000; // 1 minuto
+
+
+setInterval(() => {
+  console.log('🧹 Ejecutando limpieza automática...');
+
+  db.run(
+    `
+    DELETE FROM solicitudes
+    WHERE estado = 'instalado'
+    AND fecha <= datetime('now', '-15 days')
+    `,
+    function (err) {
+      if (err) {
+        console.error('❌ Error limpieza automática:', err);
+      } else {
+        console.log(`🗑️ Registros eliminados: ${this.changes}`);
+      }
+    }
+  );
+}, QUINCE_DIAS);
+
 
 /* =========================
    LOGIN ADMIN
