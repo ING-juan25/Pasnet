@@ -33,19 +33,23 @@ app.use(session({
 const db = new sqlite3.Database('./database.db');
 
 db.run(`
-CREATE TABLE IF NOT EXISTS solicitudes (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  plan TEXT,
-  nombre TEXT,
-  direccion TEXT,
-  telefono TEXT,
-  comentario TEXT,
-  fecha DATETIME DEFAULT CURRENT_TIMESTAMP
-)
+  CREATE TABLE IF NOT EXISTS solicitudes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    plan TEXT,
+    nombre TEXT,
+    direccion TEXT,
+    telefono TEXT,
+    comentario TEXT,
+    fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
+    estado TEXT DEFAULT 'pendiente'
+  )
 `);
 
+// Asegura estado para registros antiguos
+db.run(`UPDATE solicitudes SET estado='pendiente' WHERE estado IS NULL`);
+
 /* =========================
-   LOGIN ADMIN (ESTA ERA LA RUTA QUE FALTABA)
+   LOGIN ADMIN
 ========================= */
 app.post('/login', (req, res) => {
   const { user, password } = req.body;
@@ -74,8 +78,10 @@ function auth(req, res, next) {
 }
 
 /* =========================
-   RUTAS
+   RUTAS API
 ========================= */
+
+// Crear solicitud (frontend público)
 app.post('/solicitudes', (req, res) => {
   const { plan, nombre, direccion, telefono, comentario } = req.body;
 
@@ -88,23 +94,45 @@ app.post('/solicitudes', (req, res) => {
         console.error('❌ Error BD:', err);
         return res.status(500).json({ error: 'Error BD' });
       }
+      res.json({ ok: true, id: this.lastID });
+    }
+  );
+});
 
-      console.log('✅ Solicitud guardada ID:', this.lastID);
+// Obtener solicitudes (panel admin)
+app.get('/solicitudes', auth, (req, res) => {
+  db.all(
+    `SELECT * FROM solicitudes ORDER BY fecha DESC`,
+    [],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: 'Error BD' });
+      res.json(rows);
+    }
+  );
+});
+
+// Marcar como instalado
+app.put('/solicitudes/:id', auth, (req, res) => {
+  const { id } = req.params;
+
+  db.run(
+    `UPDATE solicitudes SET estado='instalado' WHERE id=?`,
+    [id],
+    err => {
+      if (err) {
+        return res.status(500).json({ error: 'Error actualizando estado' });
+      }
       res.json({ ok: true });
     }
   );
 });
 
-app.get('/solicitudes', auth, (req, res) => {
-  db.all(`SELECT * FROM solicitudes ORDER BY fecha DESC`, [], (err, rows) => {
-    res.json(rows);
-  });
-});
-
 /* =========================
    SERVER
 ========================= */
-app.listen(3000, () => {
-  console.log('🚀 Backend activo');
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`🚀 Backend activo en puerto ${PORT}`);
 });
+
 

@@ -1,46 +1,71 @@
-const tabla = document.getElementById('tablaSolicitudes');
-const cards = document.getElementById('cardsSolicitudes');
+const tablaPendientes = document.getElementById('tablaPendientes');
+const tablaInstalados = document.getElementById('tablaInstalados');
 const logoutBtn = document.getElementById('logout');
 
 const API = 'https://pasnet-backend.onrender.com';
 
+/* =========================
+   CARGAR SOLICITUDES
+========================= */
 fetch(`${API}/solicitudes`, {
   credentials: 'include'
 })
 .then(res => {
-  if (!res.ok) location.href = '/login.html';
+  if (!res.ok) location.href = 'login.html';
   return res.json();
 })
 .then(data => {
-  data.forEach(s => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${s.plan}</td>
-      <td>${s.nombre}</td>
-      <td>${s.direccion}</td>
-      <td>${s.telefono}</td>
-      <td>${s.comentario || '-'}</td>
-      <td>${new Date(s.fecha).toLocaleString()}</td>
-    `;
-    tabla.appendChild(tr);
+  tablaPendientes.innerHTML = '';
+  tablaInstalados.innerHTML = '';
 
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.innerHTML = `
-      <h3>${s.plan}</h3>
-      <p><strong>👤</strong> ${s.nombre}</p>
-      <p><strong>🏠</strong> ${s.direccion}</p>
-      <p><strong>📞</strong> ${s.telefono}</p>
-      <p><strong>📝</strong> ${s.comentario || 'N/A'}</p>
-      <p><strong>🕒</strong> ${new Date(s.fecha).toLocaleString()}</p>
-    `;
-    cards.appendChild(card);
+  data.forEach(s => {
+    if (s.estado === 'pendiente') {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${s.plan}</td>
+        <td>${s.nombre}</td>
+        <td>${s.direccion}</td>
+        <td>${s.telefono}</td>
+        <td>
+          <button class="btn-instalar" onclick="marcarInstalado(${s.id})">
+            ✔ Instalar
+          </button>
+        </td>
+      `;
+      tablaPendientes.appendChild(tr);
+    } else {
+      const div = document.createElement('div');
+      div.className = 'card';
+      div.innerHTML = `
+        <h3>${s.plan}</h3>
+        <p>👤 ${s.nombre}</p>
+        <p>🏠 ${s.direccion}</p>
+        <p>📞 ${s.telefono}</p>
+        <p>✅ Instalado</p>
+      `;
+      tablaInstalados.appendChild(div);
+    }
   });
 });
 
+/* =========================
+   MARCAR COMO INSTALADO
+========================= */
+function marcarInstalado(id) {
+  fetch(`${API}/solicitudes/${id}`, {
+    method: 'PUT',
+    credentials: 'include'
+  })
+  .then(() => location.reload());
+}
+
+/* =========================
+   LOGOUT
+========================= */
 logoutBtn.addEventListener('click', () => {
   fetch(`${API}/logout`, {
     method: 'POST',
     credentials: 'include'
-  }).then(() => location.href = '/login.html');
+  })
+  .then(() => location.href = 'login.html');
 });
