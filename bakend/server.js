@@ -2,11 +2,9 @@ const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
 const session = require('express-session');
-const path = require('path');
 
 const app = express();
 app.set('trust proxy', 1);
-
 
 /* =========================
    MIDDLEWARES
@@ -16,15 +14,17 @@ app.use(cors({
   credentials: true
 }));
 
-
 app.use(express.json());
-
-app.use(express.static(path.join(__dirname, '../frontend')));
 
 app.use(session({
   secret: 'pasnet_secret_key',
   resave: false,
-  saveUninitialized: false
+  saveUninitialized: false,
+  proxy: true,
+  cookie: {
+    secure: true,
+    sameSite: 'none'
+  }
 }));
 
 /* =========================
@@ -45,26 +45,25 @@ CREATE TABLE IF NOT EXISTS solicitudes (
 `);
 
 /* =========================
-   LOGIN ADMIN
+   LOGIN ADMIN (ESTA ERA LA RUTA QUE FALTABA)
 ========================= */
-app.use(session({
-  secret: 'pasnet_secret_key',
-  resave: false,
-  saveUninitialized: false,
-  proxy: true,
-  cookie: {
-    secure: true,
-    sameSite: 'none'
-  }
-}));
+app.post('/login', (req, res) => {
+  const { user, password } = req.body;
 
+  if (user === 'admin' && password === 'pasnet123') {
+    req.session.auth = true;
+    console.log('🔐 Admin autenticado');
+    return res.json({ ok: true });
+  }
+
+  res.status(401).json({ error: 'Credenciales incorrectas' });
+});
 
 app.post('/logout', (req, res) => {
   req.session.destroy(() => {
     res.json({ ok: true });
   });
 });
-
 
 /* =========================
    MIDDLEWARE PROTECCIÓN
@@ -106,5 +105,6 @@ app.get('/solicitudes', auth, (req, res) => {
    SERVER
 ========================= */
 app.listen(3000, () => {
-  console.log('🚀 Backend activo en http://localhost:3000');
+  console.log('🚀 Backend activo');
 });
+
