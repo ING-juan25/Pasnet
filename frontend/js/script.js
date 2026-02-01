@@ -78,7 +78,7 @@ planForm.addEventListener('submit', async e => {
 
   /* ---- ENVIAR A WHATSAPP ---- */
   const mensaje = `
-📡 *Solicitud de Internet Fibra Óptica*
+📡 *Solicitud de Pasnet Internet Fibra Óptica*
 ━━━━━━━━━━━━━━━━━━━━
 📦 Plan: ${currentPlan}
 👤 Nombre: ${nombre}

@@ -67,14 +67,12 @@ db.serialize(() => {
     }
   });
 });
-db.run("DELETE FROM solicitudes");
-
 
 /* =========================
    LIMPIEZA AUTOMÁTICA (15 DÍAS)
 ========================= */
 
-const QUINCE_DIAS = 60 * 1000; // 1 minuto
+const QUINCE_DIAS = 15 * 24 * 60 * 60 * 1000;
 
 
 setInterval(() => {
