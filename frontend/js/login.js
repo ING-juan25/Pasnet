@@ -6,6 +6,7 @@ form.addEventListener('submit', e => {
 
   fetch('https://pasnet-backend.onrender.com/login', {
     method: 'POST',
+    credentials: 'include', // 👈 CLAVE
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       user: user.value,
@@ -14,15 +15,6 @@ form.addEventListener('submit', e => {
   })
     .then(res => {
       if (!res.ok) throw new Error();
-      return res.json(); // 👈 ahora sí leemos el token
-    })
-    .then(data => {
-      if (!data.token) throw new Error();
-
-      // 🔐 AQUÍ ESTÁ LO QUE TE FALTABA
-      localStorage.setItem('token', data.token);
-
-      // redirección
       location.href = 'admin.html';
     })
     .catch(() => {

@@ -6,25 +6,17 @@ const listaClientes = document.getElementById('listaClientes');
 const btnAgregarCliente = document.getElementById('btnAgregarCliente');
 
 const API = 'https://pasnet-backend.onrender.com';
-const token = localStorage.getItem('token');
-
-if (!token) {
-  alert('⚠️ Debes iniciar sesión');
-  location.href = 'login.html';
-}
 
 /* =========================
    CARGAR CLIENTES
 ========================= */
 function cargarClientes() {
   fetch(`${API}/clientes`, {
-    headers: {
-      'Authorization': `Bearer ${token}`
-    }
+    credentials: 'include'
   })
     .then(res => {
       if (res.status === 401) {
-        alert('❌ Sesión no válida');
+        alert('⚠️ Sesión no válida');
         location.href = 'login.html';
         return null;
       }
@@ -43,11 +35,7 @@ function cargarClientes() {
         card.innerHTML = `
           <div class="card-header">
             <h3>${c.nombre}</h3>
-
-            <input 
-              type="checkbox"
-              ${c.estado === 'pagado' ? 'checked' : ''}
-            >
+            <input type="checkbox" ${c.estado === 'pagado' ? 'checked' : ''}>
           </div>
 
           <div class="card-body hidden">
@@ -63,13 +51,11 @@ function cargarClientes() {
             <label>📅 Fecha de cobro</label>
             <input class="fecha" type="date" value="${c.fecha_cobro || ''}">
 
-            <button class="btn-guardar">
-              ✏️ Guardar cambios
-            </button>
+            <button class="btn-guardar">✏️ Guardar cambios</button>
           </div>
         `;
 
-        // desplegar card (excepto checkbox)
+        // desplegar
         card.addEventListener('click', e => {
           if (e.target.type === 'checkbox') return;
           card.querySelector('.card-body').classList.toggle('hidden');
@@ -97,7 +83,7 @@ function cargarClientes() {
 }
 
 /* =========================
-   AGREGAR CLIENTE (SI EXISTE EL BOTÓN)
+   AGREGAR CLIENTE
 ========================= */
 if (btnAgregarCliente) {
   btnAgregarCliente.addEventListener('click', () => {
@@ -114,10 +100,8 @@ if (btnAgregarCliente) {
 
     fetch(`${API}/clientes`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         nombre,
         telefono,
@@ -126,26 +110,18 @@ if (btnAgregarCliente) {
         fecha_cobro: fecha
       })
     })
-      .then(() => {
-        document.querySelectorAll(
-          '#c-nombre, #c-telefono, #c-direccion, #c-deuda, #c-fecha'
-        ).forEach(i => (i.value = ''));
-
-        cargarClientes();
-      })
+      .then(() => cargarClientes())
       .catch(() => alert('❌ Error al guardar cliente'));
   });
 }
 
 /* =========================
-   MARCAR COMO PAGADO
+   MARCAR PAGADO
 ========================= */
 function marcarPagado(id) {
   fetch(`${API}/clientes/${id}/pagar`, {
     method: 'PUT',
-    headers: {
-      'Authorization': `Bearer ${token}`
-    }
+    credentials: 'include'
   })
     .then(() => cargarClientes())
     .catch(() => alert('❌ Error al marcar pagado'));
@@ -164,10 +140,8 @@ function guardarCambios(id) {
 
   fetch(`${API}/clientes/${id}`, {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       deuda,
       abono,
