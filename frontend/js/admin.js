@@ -34,16 +34,19 @@ fetch(`${API}/solicitudes`, {
       `;
       tablaPendientes.appendChild(tr);
     } else {
-      const div = document.createElement('div');
-      div.className = 'card';
-      div.innerHTML = `
-        <h3>${s.plan}</h3>
-        <p>👤 ${s.nombre}</p>
-        <p>🏠 ${s.direccion}</p>
-        <p>📞 ${s.telefono}</p>
-        <p>✅ Instalado</p>
-      `;
-      tablaInstalados.appendChild(div);
+    const div = document.createElement('div');
+  div.className = 'card';
+  div.innerHTML = `
+    <h3>${s.plan}</h3>
+    <p>👤 ${s.nombre}</p>
+    <p>🏠 ${s.direccion}</p>
+    <p>📞 ${s.telefono}</p>
+    <p>✅ Instalado</p>
+    <button class="btn-delete" onclick="eliminarSolicitud(${s.id})">
+      🗑 Eliminar
+    </button>
+  `;
+  tablaInstalados.appendChild(div);
     }
   });
 });
@@ -69,3 +72,25 @@ logoutBtn.addEventListener('click', () => {
   })
   .then(() => location.href = 'login.html');
 });
+function eliminarSolicitud(id) {
+  const confirmar = confirm(
+    '⚠️ ¿Seguro que deseas eliminar esta solicitud?\nEsta acción no se puede deshacer.'
+  );
+
+  if (!confirmar) return;
+
+  fetch(`${API}/solicitudes/${id}`, {
+    method: 'DELETE',
+    credentials: 'include'
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.error) {
+        alert(data.error);
+        return;
+      }
+      alert('🗑 Solicitud eliminada');
+      location.reload();
+    })
+    .catch(() => alert('Error al eliminar'));
+}

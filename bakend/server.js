@@ -175,6 +175,44 @@ app.put('/solicitudes/:id', auth, (req, res) => {
   );
 });
 
+// Eliminar solicitud (solo si está instalada)
+app.delete('/solicitudes/:id', auth, (req, res) => {
+  const { id } = req.params;
+
+  // Primero validar estado
+  db.get(
+    `SELECT estado FROM solicitudes WHERE id = ?`,
+    [id],
+    (err, row) => {
+      if (err) {
+        return res.status(500).json({ error: 'Error BD' });
+      }
+
+      if (!row) {
+        return res.status(404).json({ error: 'Solicitud no encontrada' });
+      }
+
+      if (row.estado !== 'instalado') {
+        return res.status(400).json({
+          error: 'Solo se pueden eliminar solicitudes instaladas'
+        });
+      }
+
+      // Si está instalada → eliminar
+      db.run(
+        `DELETE FROM solicitudes WHERE id = ?`,
+        [id],
+        err => {
+          if (err) {
+            return res.status(500).json({ error: 'Error al eliminar' });
+          }
+          res.json({ ok: true });
+        }
+      );
+    }
+  );
+});
+
 /* =========================
    SERVER
 ========================= */

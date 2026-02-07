@@ -97,3 +97,16 @@ th {
     display: grid;
   }
 }
+.btn-delete {
+  background: #ff3b3b;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.btn-delete:hover {
+  background: #d63030;
+}
