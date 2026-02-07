@@ -12,7 +12,14 @@
 
 <header class="topbar">
   <h1>📡 Pasnet Admin</h1>
-  <button id="logout">Cerrar sesión</button>
+
+  <nav class="top-actions">
+    <button class="btn-nav" onclick="location.href='clientes.html'">
+      💰 Cobranza
+    </button>
+
+    <button id="logout">Cerrar sesión</button>
+  </nav>
 </header>
 
 <main class="container">
@@ -35,14 +42,16 @@
 
 <h2>✅ Servicios realizados</h2>
 <div id="tablaInstalados"></div>
-
+<hr>
 
   <!-- Vista móvil -->
   <section class="cards" id="cardsSolicitudes"></section>
+  <hr>
 
 </main>
 
 <script src="js/admin.js"></script>
+<script src="js/clientes.js"></script>
 </body>
 </html>
 

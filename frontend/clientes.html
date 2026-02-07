@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Clientes | Pasnet</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+
+<header class="topbar">
+  <h1>💰 Clientes – Cobranza</h1>
+
+  <nav class="top-actions">
+    <button class="btn-nav" onclick="location.href='admin.html'">
+      ⬅ Panel
+    </button>
+  </nav>
+</header>
+
+<section id="listaClientes" class="cards"></section>
+
+<main class="container">
+
+  <h2>📥 Importar clientes</h2>
+  <input type="file" id="excelFile" accept=".xlsx, .xls">
+  <button id="btnImportar">Importar Excel</button>
+
+  <hr>
+
+  <h2>📋 Lista de clientes</h2>
+  <section id="listaClientes" class="cards"></section>
+
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<script src="js/clientes.js"></script>
+</body>
+</html>

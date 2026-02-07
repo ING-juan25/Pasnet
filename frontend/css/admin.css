@@ -110,3 +110,62 @@ th {
 .btn-delete:hover {
   background: #d63030;
 }
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* contenedor de acciones */
+.top-actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* botón navegación */
+.btn-nav {
+  background: transparent;
+  color: #00f7ff; /* usa tu color acento */
+  border: 1px solid rgba(0, 247, 255, 0.4);
+  padding: 6px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.btn-nav:hover {
+  background: rgba(0, 247, 255, 0.15);
+}
+
+/* mantiene tu botón de logout igual */
+#logout {
+  margin-left: 8px;
+}
+.clientes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  gap: 10px;
+}
+
+#buscadorClientes {
+  max-width: 260px;
+  width: 100%;
+  padding: 8px 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(0, 247, 255, 0.35);
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+  outline: none;
+}
+
+#buscadorClientes::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+#buscadorClientes:focus {
+  border-color: #00f7ff;
+}

@@ -11,12 +11,15 @@ fetch(`${API}/solicitudes`, {
   credentials: 'include'
 })
 .then(res => {
-  if (!res.ok) location.href = 'login.html';
+  if (res.status === 401) {
+    alert('❌ Sesión no válida en este dispositivo');
+    location.href = 'login.html';
+    return;
+  }
   return res.json();
 })
 .then(data => {
-  tablaPendientes.innerHTML = '';
-  tablaInstalados.innerHTML = '';
+  if (!data) return;
 
   data.forEach(s => {
     if (s.estado === 'pendiente') {

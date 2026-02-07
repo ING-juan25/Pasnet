@@ -1,0 +1,26 @@
+.clientes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  gap: 10px;
+}
+
+#buscadorClientes {
+  max-width: 260px;
+  width: 100%;
+  padding: 8px 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(0, 247, 255, 0.35);
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+  outline: none;
+}
+
+#buscadorClientes::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+#buscadorClientes:focus {
+  border-color: #00f7ff;
+}

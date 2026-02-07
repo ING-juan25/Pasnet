@@ -10,7 +10,11 @@ app.set('trust proxy', 1);
    MIDDLEWARES
 ========================= */
 app.use(cors({
-  origin: 'https://pasnet.netlify.app',
+  origin: [
+    'https://pasnet.netlify.app',
+    'http://localhost:5500',
+    'http://127.0.0.1:5500'
+  ],
   credentials: true
 }));
 
@@ -21,13 +25,12 @@ app.use(session({
   secret: 'pasnet_secret_key',
   resave: false,
   saveUninitialized: false,
-  rolling: true,                   // 👈 MANTIENE SESIÓN ACTIVA
-  proxy: true,
+  proxy: true,                // 👈 MANTIENE SESIÓN ACTIVA                     
   cookie: {
-    secure: true,
-    sameSite: 'none',
-    maxAge: 1000 * 60 * 60 * 2      // 2 horas
-  }
+  secure: true,
+  sameSite: 'none',
+  maxAge: 1000 * 60 * 60 * 2
+}
 }));
 
 /* =========================
@@ -172,6 +175,60 @@ app.put('/solicitudes/:id', auth, (req, res) => {
       }
       res.json({ ok: true });
     }
+  );
+});
+
+
+db.run(`
+  CREATE TABLE IF NOT EXISTS clientes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre TEXT,
+    telefono TEXT,
+    direccion TEXT,
+    deuda REAL DEFAULT 0,
+    abono REAL DEFAULT 0,
+    fecha_cobro TEXT,
+    estado TEXT DEFAULT 'pendiente', -- pendiente | pagado
+    creado DATETIME DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+
+app.post('/clientes', auth, (req, res) => {
+  const { nombre, telefono, direccion, deuda, fecha_cobro } = req.body;
+
+  db.run(
+    `INSERT INTO clientes (nombre, telefono, direccion, deuda, fecha_cobro)
+     VALUES (?, ?, ?, ?, ?)`,
+    [nombre, telefono, direccion, deuda, fecha_cobro],
+    () => res.json({ ok: true })
+  );
+});
+
+app.get('/clientes', auth, (req, res) => {
+  db.all(
+    `SELECT * FROM clientes ORDER BY estado, fecha_cobro`,
+    [],
+    (err, rows) => res.json(rows)
+  );
+});
+
+app.put('/clientes/:id/pagar', auth, (req, res) => {
+  db.run(
+    `UPDATE clientes SET estado='pagado', deuda=0 WHERE id=?`,
+    [req.params.id],
+    () => res.json({ ok: true })
+  );
+});
+
+app.put('/clientes/:id', auth, (req, res) => {
+  const { deuda, abono, fecha_cobro } = req.body;
+
+  db.run(
+    `UPDATE clientes
+     SET deuda=?, abono=?, fecha_cobro=?
+     WHERE id=?`,
+    [deuda, abono, fecha_cobro, req.params.id],
+    () => res.json({ ok: true })
   );
 });
 
