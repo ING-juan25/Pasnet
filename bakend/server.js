@@ -21,16 +21,16 @@ app.use(cors({
 app.use(express.json());
 
 app.use(session({
-  name: 'pasnet.sid',              // 👈 IMPORTANTE
+  name: 'pasnet.sid',
   secret: 'pasnet_secret_key',
   resave: false,
   saveUninitialized: false,
-  proxy: true,                // 👈 MANTIENE SESIÓN ACTIVA                     
+  proxy: true,
   cookie: {
-  secure: true,
-  sameSite: 'none',
-  maxAge: 1000 * 60 * 60 * 2
-}
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    maxAge: 1000 * 60 * 60 * 2
+  }
 }));
 
 /* =========================
