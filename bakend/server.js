@@ -2,6 +2,9 @@ const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
 const session = require('express-session');
+const multer = require('multer');
+const XLSX = require('xlsx');
+const fs = require('fs');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -39,75 +42,22 @@ app.use(session({
 ========================= */
 const db = new sqlite3.Database('./database.db');
 
-db.serialize(() => {
-  db.run(`
-    CREATE TABLE IF NOT EXISTS solicitudes (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      plan TEXT,
-      nombre TEXT,
-      direccion TEXT,
-      telefono TEXT,
-      comentario TEXT,
-      fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
-      estado TEXT DEFAULT 'pendiente'
-    )
-  `);
-
-  db.all(`PRAGMA table_info(solicitudes)`, (err, columns) => {
-    if (err) return console.error(err);
-
-    const existeEstado = columns.some(c => c.name === 'estado');
-
-    if (!existeEstado) {
-      db.run(
-        `ALTER TABLE solicitudes ADD COLUMN estado TEXT DEFAULT 'pendiente'`,
-        err => {
-          if (err) console.error('❌ Error creando columna estado', err);
-          else console.log('✅ Columna estado creada');
-        }
-      );
-    } else {
-      console.log('ℹ️ Columna estado ya existe');
-    }
-  });
-});
-
 /* =========================
-   LIMPIEZA AUTOMÁTICA (15 DÍAS)
+   AUTH
 ========================= */
-
-const QUINCE_DIAS = 15 * 24 * 60 * 60 * 1000;
-
-
-setInterval(() => {
-  console.log('🧹 Ejecutando limpieza automática...');
-
-  db.run(
-    `
-    DELETE FROM solicitudes
-    WHERE estado = 'instalado'
-    AND fecha <= datetime('now', '-15 days')
-    `,
-    function (err) {
-      if (err) {
-        console.error('❌ Error limpieza automática:', err);
-      } else {
-        console.log(`🗑️ Registros eliminados: ${this.changes}`);
-      }
-    }
-  );
-}, QUINCE_DIAS);
-
+function auth(req, res, next) {
+  if (req.session.auth) return next();
+  return res.status(401).json({ error: 'No autorizado' });
+}
 
 /* =========================
-   LOGIN ADMIN
+   LOGIN
 ========================= */
 app.post('/login', (req, res) => {
   const { user, password } = req.body;
 
   if (user === 'admin' && password === 'pasnet123') {
     req.session.auth = true;
-    console.log('🔐 Admin autenticado');
     return res.json({ ok: true });
   }
 
@@ -122,64 +72,8 @@ app.post('/logout', (req, res) => {
 });
 
 /* =========================
-   MIDDLEWARE PROTECCIÓN
+   TABLAS
 ========================= */
-function auth(req, res, next) {
-  if (req.session.auth) return next();
-  return res.status(401).json({ error: 'No autorizado' });
-}
-
-/* =========================
-   RUTAS API
-========================= */
-
-// Crear solicitud (frontend público)
-app.post('/solicitudes', (req, res) => {
-  const { plan, nombre, direccion, telefono, comentario } = req.body;
-
-  db.run(
-    `INSERT INTO solicitudes (plan, nombre, direccion, telefono, comentario)
-     VALUES (?, ?, ?, ?, ?)`,
-    [plan, nombre, direccion, telefono, comentario],
-    function (err) {
-      if (err) {
-        console.error('❌ Error BD:', err);
-        return res.status(500).json({ error: 'Error BD' });
-      }
-      res.json({ ok: true, id: this.lastID });
-    }
-  );
-});
-
-// Obtener solicitudes (panel admin)
-app.get('/solicitudes', auth, (req, res) => {
-  db.all(
-    `SELECT * FROM solicitudes ORDER BY fecha DESC`,
-    [],
-    (err, rows) => {
-      if (err) return res.status(500).json({ error: 'Error BD' });
-      res.json(rows);
-    }
-  );
-});
-
-// Marcar como instalado
-app.put('/solicitudes/:id', auth, (req, res) => {
-  const { id } = req.params;
-
-  db.run(
-    `UPDATE solicitudes SET estado='instalado' WHERE id=?`,
-    [id],
-    err => {
-      if (err) {
-        return res.status(500).json({ error: 'Error actualizando estado' });
-      }
-      res.json({ ok: true });
-    }
-  );
-});
-
-
 db.run(`
   CREATE TABLE IF NOT EXISTS clientes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -189,10 +83,32 @@ db.run(`
     deuda REAL DEFAULT 0,
     abono REAL DEFAULT 0,
     fecha_cobro TEXT,
-    estado TEXT DEFAULT 'pendiente', -- pendiente | pagado
+    estado TEXT DEFAULT 'pendiente',
     creado DATETIME DEFAULT CURRENT_TIMESTAMP
   )
 `);
+
+db.run(`
+  CREATE TABLE IF NOT EXISTS solicitudes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    plan TEXT,
+    nombre TEXT,
+    direccion TEXT,
+    telefono TEXT,
+    comentario TEXT,
+    fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
+    estado TEXT DEFAULT 'pendiente'
+  )
+`);
+
+/* =========================
+   CLIENTES CRUD
+========================= */
+app.get('/clientes', auth, (req, res) => {
+  db.all(`SELECT * FROM clientes ORDER BY estado, fecha_cobro`, [], (_, rows) => {
+    res.json(rows);
+  });
+});
 
 app.post('/clientes', auth, (req, res) => {
   const { nombre, telefono, direccion, deuda, fecha_cobro } = req.body;
@@ -205,11 +121,13 @@ app.post('/clientes', auth, (req, res) => {
   );
 });
 
-app.get('/clientes', auth, (req, res) => {
-  db.all(
-    `SELECT * FROM clientes ORDER BY estado, fecha_cobro`,
-    [],
-    (err, rows) => res.json(rows)
+app.put('/clientes/:id', auth, (req, res) => {
+  const { deuda, abono, fecha_cobro } = req.body;
+
+  db.run(
+    `UPDATE clientes SET deuda=?, abono=?, fecha_cobro=? WHERE id=?`,
+    [deuda, abono, fecha_cobro, req.params.id],
+    () => res.json({ ok: true })
   );
 });
 
@@ -221,54 +139,40 @@ app.put('/clientes/:id/pagar', auth, (req, res) => {
   );
 });
 
-app.put('/clientes/:id', auth, (req, res) => {
-  const { deuda, abono, fecha_cobro } = req.body;
+/* =========================
+   🔥 IMPORTAR CLIENTES DESDE EXCEL (SQLITE)
+========================= */
+const upload = multer({ dest: 'uploads/' });
 
-  db.run(
-    `UPDATE clientes
-     SET deuda=?, abono=?, fecha_cobro=?
-     WHERE id=?`,
-    [deuda, abono, fecha_cobro, req.params.id],
-    () => res.json({ ok: true })
-  );
-});
+app.post('/clientes/importar', auth, upload.single('excel'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'Archivo requerido' });
+  }
 
-// Eliminar solicitud (solo si está instalada)
-app.delete('/solicitudes/:id', auth, (req, res) => {
-  const { id } = req.params;
+  const workbook = XLSX.readFile(req.file.path);
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(sheet);
 
-  // Primero validar estado
-  db.get(
-    `SELECT estado FROM solicitudes WHERE id = ?`,
-    [id],
-    (err, row) => {
-      if (err) {
-        return res.status(500).json({ error: 'Error BD' });
-      }
+  let count = 0;
 
-      if (!row) {
-        return res.status(404).json({ error: 'Solicitud no encontrada' });
-      }
+  rows.forEach(r => {
+    db.run(
+      `INSERT INTO clientes (nombre, telefono, direccion, deuda, fecha_cobro)
+       VALUES (?, ?, ?, ?, ?)`,
+      [
+        r.nombre || '',
+        r.telefono || '',
+        r.direccion || '',
+        r.deuda || 0,
+        r.fecha_cobro || ''
+      ]
+    );
+    count++;
+  });
 
-      if (row.estado !== 'instalado') {
-        return res.status(400).json({
-          error: 'Solo se pueden eliminar solicitudes instaladas'
-        });
-      }
+  fs.unlinkSync(req.file.path); // borrar archivo temporal
 
-      // Si está instalada → eliminar
-      db.run(
-        `DELETE FROM solicitudes WHERE id = ?`,
-        [id],
-        err => {
-          if (err) {
-            return res.status(500).json({ error: 'Error al eliminar' });
-          }
-          res.json({ ok: true });
-        }
-      );
-    }
-  );
+  res.json({ ok: true, importados: count });
 });
 
 /* =========================
@@ -278,6 +182,3 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Backend activo en puerto ${PORT}`);
 });
-
-
-

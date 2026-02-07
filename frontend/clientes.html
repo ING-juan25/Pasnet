@@ -8,32 +8,142 @@
 </head>
 <body>
 
-<header class="topbar">
-  <h1>💰 Clientes – Cobranza</h1>
+<!-- =========================
+     HEADER
+========================= -->
+<div class="clientes-header">
+  <h2>📋 Lista de clientes</h2>
 
-  <nav class="top-actions">
-    <button class="btn-nav" onclick="location.href='admin.html'">
-      ⬅ Panel
-    </button>
-  </nav>
-</header>
+  <input
+    type="search"
+    id="buscadorClientes"
+    placeholder="🔍 Buscar cliente..."
+  >
+</div>
 
-<section id="listaClientes" class="cards"></section>
-
+<!-- =========================
+     CONTENIDO
+========================= -->
 <main class="container">
 
-  <h2>📥 Importar clientes</h2>
-  <input type="file" id="excelFile" accept=".xlsx, .xls">
-  <button id="btnImportar">Importar Excel</button>
+  <!-- IMPORTAR EXCEL -->
+  <h2>📥 Importar clientes desde Excel</h2>
+
+  <input type="file" id="excelInput" accept=".xlsx,.xls">
+  <button id="btnImportarExcel">📥 Importar Excel</button>
+
+  <p style="opacity:.7; font-size:14px;">
+    El Excel debe contener columnas:
+    <b>nombre, telefono, direccion, deuda, fecha_cobro</b>
+  </p>
 
   <hr>
 
-  <h2>📋 Lista de clientes</h2>
+  <!-- LISTA CLIENTES -->
   <section id="listaClientes" class="cards"></section>
 
 </main>
 
-<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-<script src="js/clientes.js"></script>
+<!-- =========================
+     SCRIPT
+========================= -->
+<script>
+const API = 'https://pasnet-backend.onrender.com';
+const lista = document.getElementById('listaClientes');
+const buscador = document.getElementById('buscadorClientes');
+
+/* =========================
+   CARGAR CLIENTES
+========================= */
+async function cargarClientes() {
+  const res = await fetch(`${API}/clientes`, {
+    credentials: 'include'
+  });
+
+  if (res.status === 401) {
+    alert('Sesión expirada');
+    location.href = 'login.html';
+    return;
+  }
+
+  const clientes = await res.json();
+  renderClientes(clientes);
+}
+
+function renderClientes(clientes) {
+  lista.innerHTML = '';
+
+  clientes.forEach(c => {
+    const div = document.createElement('div');
+    div.className = 'card';
+
+    div.innerHTML = `
+      <h3>${c.nombre}</h3>
+      <p>📞 ${c.telefono}</p>
+      <p>🏠 ${c.direccion}</p>
+      <p>💰 Deuda: $${c.deuda}</p>
+      <p>📅 Cobro: ${c.fecha_cobro || 'N/A'}</p>
+      <p>📌 Estado: ${c.estado}</p>
+    `;
+
+    lista.appendChild(div);
+  });
+}
+
+/* =========================
+   BUSCADOR
+========================= */
+buscador.addEventListener('input', async e => {
+  const texto = e.target.value.toLowerCase();
+  const res = await fetch(`${API}/clientes`, { credentials: 'include' });
+  const clientes = await res.json();
+
+  const filtrados = clientes.filter(c =>
+    c.nombre.toLowerCase().includes(texto) ||
+    c.telefono.includes(texto)
+  );
+
+  renderClientes(filtrados);
+});
+
+/* =========================
+   IMPORTAR EXCEL (BACKEND)
+========================= */
+document.getElementById('btnImportarExcel').addEventListener('click', async () => {
+  const file = document.getElementById('excelInput').files[0];
+
+  if (!file) {
+    alert('❌ Selecciona un archivo Excel');
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('excel', file);
+
+  try {
+    const res = await fetch(`${API}/clientes/importar`, {
+      method: 'POST',
+      credentials: 'include',
+      body: formData
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) throw new Error();
+
+    alert(`✅ Clientes importados: ${data.importados}`);
+    cargarClientes();
+
+  } catch {
+    alert('❌ Error importando el Excel');
+  }
+});
+
+/* =========================
+   INIT
+========================= */
+cargarClientes();
+</script>
+
 </body>
 </html>
