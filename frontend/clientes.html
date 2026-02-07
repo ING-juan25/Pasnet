@@ -48,101 +48,121 @@
      SCRIPT
 ========================= -->
 <script>
-const API = 'https://pasnet-backend.onrender.com';
-const lista = document.getElementById('listaClientes');
-const buscador = document.getElementById('buscadorClientes');
+document.addEventListener('DOMContentLoaded', () => {
 
-/* =========================
-   CARGAR CLIENTES
-========================= */
-async function cargarClientes() {
-  const res = await fetch(`${API}/clientes`, {
-    credentials: 'include'
-  });
+  const API = 'https://pasnet-backend.onrender.com';
+  const lista = document.getElementById('listaClientes');
+  const buscador = document.getElementById('buscadorClientes');
+  const btnImportar = document.getElementById('btnImportarExcel');
+  const excelInput = document.getElementById('excelInput');
 
-  if (res.status === 401) {
-    alert('Sesión expirada');
-    location.href = 'login.html';
-    return;
+  let clientesCache = [];
+
+  /* =========================
+     CARGAR CLIENTES
+  ========================= */
+  async function cargarClientes() {
+    try {
+      const res = await fetch(`${API}/clientes`, {
+        credentials: 'include'
+      });
+
+      if (res.status === 401) {
+        alert('❌ Sesión expirada');
+        location.href = 'login.html';
+        return;
+      }
+
+      clientesCache = await res.json();
+      renderClientes(clientesCache);
+
+    } catch (err) {
+      console.error(err);
+      lista.innerHTML = '<p style="opacity:.7">❌ Error cargando clientes</p>';
+    }
   }
 
-  const clientes = await res.json();
-  renderClientes(clientes);
-}
+  /* =========================
+     RENDER CLIENTES
+  ========================= */
+  function renderClientes(clientes) {
+    lista.innerHTML = '';
 
-function renderClientes(clientes) {
-  lista.innerHTML = '';
+    if (!clientes.length) {
+      lista.innerHTML = '<p style="opacity:.6">No hay clientes registrados</p>';
+      return;
+    }
 
-  clientes.forEach(c => {
-    const div = document.createElement('div');
-    div.className = 'card';
+    clientes.forEach(c => {
+      const card = document.createElement('div');
+      card.className = 'card';
 
-    div.innerHTML = `
-      <h3>${c.nombre}</h3>
-      <p>📞 ${c.telefono}</p>
-      <p>🏠 ${c.direccion}</p>
-      <p>💰 Deuda: $${c.deuda}</p>
-      <p>📅 Cobro: ${c.fecha_cobro || 'N/A'}</p>
-      <p>📌 Estado: ${c.estado}</p>
-    `;
+      card.innerHTML = `
+        <h3>${c.nombre || 'Sin nombre'}</h3>
+        <p>📞 ${c.telefono || 'N/A'}</p>
+        <p>🏠 ${c.direccion || 'N/A'}</p>
+        <p>💰 Deuda: $${c.deuda || 0}</p>
+        <p>📅 Cobro: ${c.fecha_cobro || 'N/A'}</p>
+        <p>📌 Estado: ${c.estado || 'pendiente'}</p>
+      `;
 
-    lista.appendChild(div);
-  });
-}
-
-/* =========================
-   BUSCADOR
-========================= */
-buscador.addEventListener('input', async e => {
-  const texto = e.target.value.toLowerCase();
-  const res = await fetch(`${API}/clientes`, { credentials: 'include' });
-  const clientes = await res.json();
-
-  const filtrados = clientes.filter(c =>
-    c.nombre.toLowerCase().includes(texto) ||
-    c.telefono.includes(texto)
-  );
-
-  renderClientes(filtrados);
-});
-
-/* =========================
-   IMPORTAR EXCEL (BACKEND)
-========================= */
-document.getElementById('btnImportarExcel').addEventListener('click', async () => {
-  const file = document.getElementById('excelInput').files[0];
-
-  if (!file) {
-    alert('❌ Selecciona un archivo Excel');
-    return;
-  }
-
-  const formData = new FormData();
-  formData.append('excel', file);
-
-  try {
-    const res = await fetch(`${API}/clientes/importar`, {
-      method: 'POST',
-      credentials: 'include',
-      body: formData
+      lista.appendChild(card);
     });
-
-    const data = await res.json();
-
-    if (!res.ok) throw new Error();
-
-    alert(`✅ Clientes importados: ${data.importados}`);
-    cargarClientes();
-
-  } catch {
-    alert('❌ Error importando el Excel');
   }
-});
 
-/* =========================
-   INIT
-========================= */
-cargarClientes();
+  /* =========================
+     BUSCADOR
+  ========================= */
+  buscador.addEventListener('input', e => {
+    const texto = e.target.value.toLowerCase();
+
+    const filtrados = clientesCache.filter(c =>
+      (c.nombre || '').toLowerCase().includes(texto) ||
+      (c.telefono || '').includes(texto)
+    );
+
+    renderClientes(filtrados);
+  });
+
+  /* =========================
+     IMPORTAR EXCEL
+  ========================= */
+  btnImportar.addEventListener('click', async () => {
+    const file = excelInput.files[0];
+
+    if (!file) {
+      alert('❌ Selecciona un archivo Excel');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('excel', file);
+
+    try {
+      const res = await fetch(`${API}/clientes/importar`, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData
+      });
+
+      if (!res.ok) throw new Error();
+
+      const data = await res.json();
+      alert(`✅ Clientes importados: ${data.importados || 'OK'}`);
+      cargarClientes();
+
+    } catch (err) {
+      console.error(err);
+      alert('❌ Error importando el Excel');
+    }
+  });
+
+  /* =========================
+     INIT
+  ========================= */
+  cargarClientes();
+
+});
 </script>
 
 </body>

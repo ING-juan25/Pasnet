@@ -105,9 +105,11 @@ db.run(`
    CLIENTES CRUD
 ========================= */
 app.get('/clientes', auth, (req, res) => {
-  db.all(`SELECT * FROM clientes ORDER BY estado, fecha_cobro`, [], (_, rows) => {
-    res.json(rows);
-  });
+  db.all(
+    `SELECT * FROM clientes ORDER BY estado, fecha_cobro`,
+    [],
+    (_, rows) => res.json(rows)
+  );
 });
 
 app.post('/clientes', auth, (req, res) => {
@@ -125,7 +127,9 @@ app.put('/clientes/:id', auth, (req, res) => {
   const { deuda, abono, fecha_cobro } = req.body;
 
   db.run(
-    `UPDATE clientes SET deuda=?, abono=?, fecha_cobro=? WHERE id=?`,
+    `UPDATE clientes
+     SET deuda=?, abono=?, fecha_cobro=?
+     WHERE id=?`,
     [deuda, abono, fecha_cobro, req.params.id],
     () => res.json({ ok: true })
   );
@@ -140,7 +144,7 @@ app.put('/clientes/:id/pagar', auth, (req, res) => {
 });
 
 /* =========================
-   🔥 IMPORTAR CLIENTES DESDE EXCEL (SQLITE)
+   🔥 IMPORTAR CLIENTES DESDE EXCEL
 ========================= */
 const upload = multer({ dest: 'uploads/' });
 
@@ -149,30 +153,44 @@ app.post('/clientes/importar', auth, upload.single('excel'), (req, res) => {
     return res.status(400).json({ error: 'Archivo requerido' });
   }
 
-  const workbook = XLSX.readFile(req.file.path);
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json(sheet);
+  try {
+    const workbook = XLSX.readFile(req.file.path);
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet);
 
-  let count = 0;
+    if (!rows.length) {
+      fs.unlinkSync(req.file.path);
+      return res.status(400).json({ error: 'Excel vacío' });
+    }
 
-  rows.forEach(r => {
-    db.run(
-      `INSERT INTO clientes (nombre, telefono, direccion, deuda, fecha_cobro)
-       VALUES (?, ?, ?, ?, ?)`,
-      [
+    let count = 0;
+
+    const stmt = db.prepare(`
+      INSERT INTO clientes
+      (nombre, telefono, direccion, deuda, fecha_cobro)
+      VALUES (?, ?, ?, ?, ?)
+    `);
+
+    rows.forEach(r => {
+      stmt.run(
         r.nombre || '',
-        r.telefono || '',
+        String(r.telefono || ''),
         r.direccion || '',
-        r.deuda || 0,
-        r.fecha_cobro || ''
-      ]
-    );
-    count++;
-  });
+        Number(r.deuda) || 0,
+        r.fecha_cobro || null
+      );
+      count++;
+    });
 
-  fs.unlinkSync(req.file.path); // borrar archivo temporal
+    stmt.finalize();
+    fs.unlinkSync(req.file.path);
 
-  res.json({ ok: true, importados: count });
+    res.json({ ok: true, importados: count });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error procesando Excel' });
+  }
 });
 
 /* =========================
