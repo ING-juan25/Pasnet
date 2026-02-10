@@ -1,66 +1,15 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <title>Clientes | Pasnet</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="css/admin.css">
-</head>
-<body>
-
-<!-- =========================
-     HEADER
-========================= -->
-<div class="clientes-header">
-  <h2>📋 Lista de clientes</h2>
-
-  <input
-    type="search"
-    id="buscadorClientes"
-    placeholder="🔍 Buscar cliente..."
-  >
-</div>
-
-<!-- =========================
-     CONTENIDO
-========================= -->
-<main class="container">
-
-  <!-- IMPORTAR EXCEL -->
-  <h2>📥 Importar clientes desde Excel</h2>
-  <button id="btnLimpiarClientes" style="background:#c0392b;color:#fff;">
-  🧹 Limpiar base de datos
-</button>
-
-  <input type="file" id="excelInput" accept=".xlsx,.xls">
-  <button id="btnImportarExcel">📥 Importar Excel</button>
-
-  <p style="opacity:.7; font-size:14px;">
-    El Excel debe contener columnas:
-    <b>nombre, telefono, direccion, deuda, fecha_cobro</b>
-  </p>
-
-  <hr>
-
-  <!-- LISTA CLIENTES -->
-  <section id="listaClientes" class="cards"></section>
-
-</main>
-
-<!-- =========================
-     SCRIPT
-========================= -->
 <script>
 document.addEventListener('DOMContentLoaded', () => {
 
   const API = location.hostname === 'localhost'
-  ? 'http://localhost:3000'
-  : 'https://pasnet-backend.onrender.com';
+    ? 'http://localhost:3000'
+    : 'https://pasnet-backend.onrender.com';
 
   const lista = document.getElementById('listaClientes');
   const buscador = document.getElementById('buscadorClientes');
   const btnImportar = document.getElementById('btnImportarExcel');
   const excelInput = document.getElementById('excelInput');
+  const btnLimpiar = document.getElementById('btnLimpiarClientes');
 
   let clientesCache = [];
 
@@ -86,28 +35,6 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error(err);
       lista.innerHTML = '<p style="opacity:.7">❌ Error cargando clientes</p>';
     }
-
-    const btnLimpiar = document.getElementById('btnLimpiarClientes');
-
-if (btnLimpiar) {
-  btnLimpiar.addEventListener('click', async () => {
-    if (!confirm('⚠️ Esto eliminará TODOS los clientes. ¿Continuar?')) return;
-
-    const res = await fetch(`${API}/clientes/limpiar`, {
-      method: 'DELETE',
-      credentials: 'include'
-    });
-
-    if (!res.ok) {
-      alert('❌ Error limpiando clientes');
-      return;
-    }
-
-    alert('✅ Base de datos limpia');
-    clientesCache = [];
-    renderClientes([]);
-  });
-}
   }
 
   /* =========================
@@ -174,7 +101,6 @@ if (btnLimpiar) {
       });
 
       const data = await res.json();
-
       if (!res.ok) throw new Error(data.error);
 
       alert(`✅ Clientes importados: ${data.importados}`);
@@ -187,12 +113,31 @@ if (btnLimpiar) {
   });
 
   /* =========================
+     LIMPIAR BASE DE DATOS
+  ========================= */
+  btnLimpiar.addEventListener('click', async () => {
+    const confirmar = confirm('⚠️ Esto eliminará TODOS los clientes. ¿Continuar?');
+    if (!confirmar) return;
+
+    const res = await fetch(`${API}/clientes/limpiar`, {
+      method: 'DELETE',
+      credentials: 'include'
+    });
+
+    if (!res.ok) {
+      alert('❌ Error limpiando clientes');
+      return;
+    }
+
+    alert('✅ Base de datos limpia');
+    clientesCache = [];
+    renderClientes([]);
+  });
+
+  /* =========================
      INIT
   ========================= */
   cargarClientes();
 
 });
 </script>
-
-</body>
-</html>
