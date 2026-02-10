@@ -43,11 +43,7 @@ body {
   padding: 20px;
 }
 
-/* TABLE DESKTOP */
-.table-wrapper {
-  overflow-x: auto;
-}
-
+/* TABLE (ADMIN) */
 table {
   width: 100%;
   border-collapse: collapse;
@@ -64,9 +60,12 @@ th {
   color: var(--neon);
 }
 
-/* CARDS MOBILE */
+/* =========================
+   CARDS (🔥 FIX IMPORTANTE)
+========================= */
 .cards {
-  display: none;
+  display: grid;              /* 🔥 ANTES: display:none */
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 15px;
 }
 
@@ -87,62 +86,14 @@ th {
   font-size: .85rem;
 }
 
-/* RESPONSIVE */
+/* RESPONSIVE SOLO PARA TABLAS */
 @media (max-width: 900px) {
   table {
     display: none;
   }
-
-  .cards {
-    display: grid;
-  }
-}
-.btn-delete {
-  background: #ff3b3b;
-  color: white;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  margin-top: 10px;
 }
 
-.btn-delete:hover {
-  background: #d63030;
-}
-
-.topbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-/* contenedor de acciones */
-.top-actions {
-  display: flex;
-  gap: 10px;
-}
-
-/* botón navegación */
-.btn-nav {
-  background: transparent;
-  color: #00f7ff; /* usa tu color acento */
-  border: 1px solid rgba(0, 247, 255, 0.4);
-  padding: 6px 14px;
-  border-radius: 20px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: all 0.3s ease;
-}
-
-.btn-nav:hover {
-  background: rgba(0, 247, 255, 0.15);
-}
-
-/* mantiene tu botón de logout igual */
-#logout {
-  margin-left: 8px;
-}
+/* HEADER CLIENTES */
 .clientes-header {
   display: flex;
   justify-content: space-between;

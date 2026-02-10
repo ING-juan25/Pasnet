@@ -31,8 +31,8 @@ app.use(session({
   proxy: true,
   cookie: {
     httpOnly: true,
-    secure: true,
-    sameSite: 'none',
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     maxAge: 1000 * 60 * 60 * 2
   }
 }));
@@ -40,7 +40,12 @@ app.use(session({
 /* =========================
    BASE DE DATOS
 ========================= */
-const db = new sqlite3.Database('./database.db');
+const path = require('path');
+
+
+const dbPath = path.join(__dirname, 'database.db');
+const db = new sqlite3.Database(dbPath);
+
 
 /* =========================
    AUTH
@@ -142,11 +147,56 @@ app.put('/clientes/:id/pagar', auth, (req, res) => {
     () => res.json({ ok: true })
   );
 });
+app.delete('/clientes/limpiar', auth, (req, res) => {
+  console.log('🧹 Limpieza solicitada');
+
+  db.run('DELETE FROM clientes', err => {
+    if (err) {
+      console.error('❌ Error SQLite:', err);
+      return res.status(500).json({ error: 'Error limpiando clientes' });
+    }
+
+    console.log('✅ Clientes eliminados');
+    res.json({ ok: true });
+  });
+});
 
 /* =========================
-   🔥 IMPORTAR CLIENTES DESDE EXCEL
+   🔥 IMPORTAR CLIENTES DESDE EXCEL (FIX TOTAL)
 ========================= */
 const upload = multer({ dest: 'uploads/' });
+
+function normalizar(texto = '') {
+  return texto
+    .toString()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, '')
+    .trim();
+}
+
+function excelDateToISO(value) {
+  if (!value) return null;
+
+  // si viene como string numérico "45412"
+  if (!isNaN(value)) {
+    value = Number(value);
+  }
+
+  if (typeof value === 'number') {
+    const epoch = new Date(Date.UTC(1899, 11, 30));
+    const date = new Date(epoch.getTime() + value * 86400 * 1000);
+    return date.toISOString().split('T')[0];
+  }
+
+  // si ya viene como texto
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  return null;
+}
 
 app.post('/clientes/importar', auth, upload.single('excel'), (req, res) => {
   if (!req.file) {
@@ -171,14 +221,50 @@ app.post('/clientes/importar', auth, upload.single('excel'), (req, res) => {
       VALUES (?, ?, ?, ?, ?)
     `);
 
-    rows.forEach(r => {
-      stmt.run(
-        r.nombre || '',
-        String(r.telefono || ''),
-        r.direccion || '',
-        Number(r.deuda) || 0,
-        r.fecha_cobro || null
+    rows.forEach(row => {
+      const data = {};
+
+      Object.keys(row).forEach(key => {
+        data[normalizar(key)] = row[key];
+      });
+
+      const nombre =
+        data.nombre ||
+        data.nombredelcliente ||
+        data.cliente ||
+        '';
+
+      const telefono =
+        data.telefono ||
+        data.celular ||
+        data.movil ||
+        '';
+
+      const direccion =
+        data.direccion ||
+        data.domicilio ||
+        '';
+
+      const deuda = Number(
+        data.deuda ||
+        data.saldo ||
+        0
       );
+
+      const fecha_cobro = excelDateToISO(
+        data.fecha_cobro ||
+        data.fechacobro ||
+        data.fechadecobro
+      );
+
+      stmt.run(
+        nombre,
+        String(telefono),
+        direccion,
+        deuda,
+        fecha_cobro
+      );
+
       count++;
     });
 

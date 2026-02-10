@@ -1,158 +1,126 @@
 /* =========================
-   CLIENTES - COBRANZA
+   CLIENTES - PASNET
 ========================= */
 
-const listaClientes = document.getElementById('listaClientes');
-const btnAgregarCliente = document.getElementById('btnAgregarCliente');
+document.addEventListener('DOMContentLoaded', () => {
 
-const API = 'https://pasnet-backend.onrender.com';
+  const lista = document.getElementById('listaClientes');
+  const buscador = document.getElementById('buscadorClientes');
+  const btnImportar = document.getElementById('btnImportarExcel');
+  const excelInput = document.getElementById('excelInput');
 
-/* =========================
-   CARGAR CLIENTES
-========================= */
-function cargarClientes() {
-  fetch(`${API}/clientes`, {
-    credentials: 'include'
-  })
-    .then(res => {
+  const API = location.hostname === 'localhost'
+    ? 'http://localhost:3000'
+    : 'https://pasnet-backend.onrender.com';
+
+  console.log('API usada:', API);
+
+  let clientesCache = [];
+
+  /* =========================
+     CARGAR CLIENTES
+  ========================= */
+  async function cargarClientes() {
+    try {
+      const res = await fetch(`${API}/clientes`, { credentials: 'include' });
+
       if (res.status === 401) {
-        alert('⚠️ Sesión no válida');
+        alert('❌ Sesión expirada');
         location.href = 'login.html';
-        return null;
+        return;
       }
-      return res.json();
-    })
-    .then(data => {
-      if (!data || !listaClientes) return;
 
-      listaClientes.innerHTML = '';
+      clientesCache = await res.json();
+      renderClientes(clientesCache);
 
-      data.forEach(c => {
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.dataset.id = c.id;
-
-        card.innerHTML = `
-          <div class="card-header">
-            <h3>${c.nombre}</h3>
-            <input type="checkbox" ${c.estado === 'pagado' ? 'checked' : ''}>
-          </div>
-
-          <div class="card-body hidden">
-            <p>📞 ${c.telefono || ''}</p>
-            <p>🏠 ${c.direccion || ''}</p>
-
-            <label>💰 Deuda</label>
-            <input class="deuda" type="number" value="${c.deuda || 0}">
-
-            <label>💵 Abono</label>
-            <input class="abono" type="number" value="${c.abono || 0}">
-
-            <label>📅 Fecha de cobro</label>
-            <input class="fecha" type="date" value="${c.fecha_cobro || ''}">
-
-            <button class="btn-guardar">✏️ Guardar cambios</button>
-          </div>
-        `;
-
-        // desplegar
-        card.addEventListener('click', e => {
-          if (e.target.type === 'checkbox') return;
-          card.querySelector('.card-body').classList.toggle('hidden');
-        });
-
-        // marcar pagado
-        card.querySelector('input[type="checkbox"]').addEventListener('click', e => {
-          e.stopPropagation();
-          marcarPagado(c.id);
-        });
-
-        // guardar cambios
-        card.querySelector('.btn-guardar').addEventListener('click', e => {
-          e.stopPropagation();
-          guardarCambios(c.id);
-        });
-
-        listaClientes.appendChild(card);
-      });
-    })
-    .catch(err => {
+    } catch (err) {
       console.error(err);
-      alert('❌ Error cargando clientes');
-    });
-}
+      lista.innerHTML = '<p style="opacity:.7">❌ Error cargando clientes</p>';
+    }
+  }
 
-/* =========================
-   AGREGAR CLIENTE
-========================= */
-if (btnAgregarCliente) {
-  btnAgregarCliente.addEventListener('click', () => {
-    const nombre = document.getElementById('c-nombre').value.trim();
-    const telefono = document.getElementById('c-telefono').value.trim();
-    const direccion = document.getElementById('c-direccion').value.trim();
-    const deuda = document.getElementById('c-deuda').value;
-    const fecha = document.getElementById('c-fecha').value;
+  /* =========================
+     RENDER CLIENTES
+  ========================= */
+  function renderClientes(clientes) {
+    lista.innerHTML = '';
 
-    if (!nombre) {
-      alert('❌ El nombre es obligatorio');
+    if (!clientes.length) {
+      lista.innerHTML = '<p style="opacity:.6">No hay clientes registrados</p>';
       return;
     }
 
-    fetch(`${API}/clientes`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        nombre,
-        telefono,
-        direccion,
-        deuda,
-        fecha_cobro: fecha
-      })
-    })
-      .then(() => cargarClientes())
-      .catch(() => alert('❌ Error al guardar cliente'));
+    clientes.forEach(c => {
+      const nombre = (c.nombre || '').trim();
+      const telefono = (c.telefono || '').trim();
+      const direccion = (c.direccion || '').trim();
+
+      const card = document.createElement('div');
+      card.className = 'card';
+
+      card.innerHTML = `
+        <h3>${nombre || 'Sin nombre'}</h3>
+        <p>📞 ${telefono || 'N/A'}</p>
+        <p>🏠 ${direccion || 'N/A'}</p>
+        <p>💰 Deuda: $${Number(c.deuda || 0).toLocaleString()}</p>
+        <p>📅 Cobro: ${c.fecha_cobro || 'N/A'}</p>
+        <p>📌 Estado: ${c.estado || 'pendiente'}</p>
+      `;
+
+      lista.appendChild(card);
+    });
+  }
+
+  /* =========================
+     BUSCADOR
+  ========================= */
+  buscador.addEventListener('input', e => {
+    const texto = e.target.value.toLowerCase();
+
+    const filtrados = clientesCache.filter(c =>
+      (c.nombre || '').toLowerCase().includes(texto) ||
+      (c.telefono || '').includes(texto)
+    );
+
+    renderClientes(filtrados);
   });
-}
 
-/* =========================
-   MARCAR PAGADO
-========================= */
-function marcarPagado(id) {
-  fetch(`${API}/clientes/${id}/pagar`, {
-    method: 'PUT',
-    credentials: 'include'
-  })
-    .then(() => cargarClientes())
-    .catch(() => alert('❌ Error al marcar pagado'));
-}
+  /* =========================
+     IMPORTAR EXCEL
+  ========================= */
+  btnImportar.addEventListener('click', async () => {
+    const file = excelInput.files[0];
 
-/* =========================
-   GUARDAR CAMBIOS
-========================= */
-function guardarCambios(id) {
-  const card = document.querySelector(`[data-id="${id}"]`);
-  if (!card) return;
+    if (!file) {
+      alert('❌ Selecciona un archivo Excel');
+      return;
+    }
 
-  const deuda = card.querySelector('.deuda').value;
-  const abono = card.querySelector('.abono').value;
-  const fecha = card.querySelector('.fecha').value;
+    const formData = new FormData();
+    formData.append('excel', file);
 
-  fetch(`${API}/clientes/${id}`, {
-    method: 'PUT',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      deuda,
-      abono,
-      fecha_cobro: fecha
-    })
-  })
-    .then(() => alert('✅ Datos actualizados'))
-    .catch(() => alert('❌ Error al actualizar'));
-}
+    try {
+      const res = await fetch(`${API}/clientes/importar`, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData
+      });
 
-/* =========================
-   INIT
-========================= */
-cargarClientes();
+      if (!res.ok) throw new Error();
+
+      const data = await res.json();
+      alert(`✅ Clientes importados: ${data.importados || 'OK'}`);
+      cargarClientes();
+
+    } catch (err) {
+      console.error(err);
+      alert('❌ Error importando el Excel');
+    }
+  });
+
+  /* =========================
+     INIT
+  ========================= */
+  cargarClientes();
+
+});
