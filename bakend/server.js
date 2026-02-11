@@ -94,6 +94,19 @@ db.run(`
 `);
 
 db.run(`
+  CREATE TABLE IF NOT EXISTS movimientos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cliente_id INTEGER NOT NULL,
+    tipo TEXT NOT NULL, -- 'pago', 'aumento', 'promesa'
+    monto REAL DEFAULT 0,
+    concepto TEXT,
+    fecha TEXT NOT NULL,
+    creado DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (cliente_id) REFERENCES clientes(id)
+  )
+`);
+
+db.run(`
   CREATE TABLE IF NOT EXISTS solicitudes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     plan TEXT,
@@ -159,6 +172,50 @@ app.delete('/clientes/limpiar', auth, (req, res) => {
     console.log('✅ Clientes eliminados');
     res.json({ ok: true });
   });
+});
+
+app.get('/clientes/:id/movimientos', auth, (req, res) => {
+  db.all(
+    `SELECT * FROM movimientos
+     WHERE cliente_id=?
+     ORDER BY fecha DESC`,
+    [req.params.id],
+    (_, rows) => res.json(rows)
+  );
+});
+
+app.post('/clientes/:id/movimientos', auth, (req, res) => {
+  const { tipo, monto, concepto, fecha } = req.body;
+  const clienteId = req.params.id;
+
+  db.run(
+    `INSERT INTO movimientos (cliente_id, tipo, monto, concepto, fecha)
+     VALUES (?, ?, ?, ?, ?)`,
+    [clienteId, tipo, monto || 0, concepto || '', fecha],
+    function (err) {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'Error guardando movimiento' });
+      }
+
+      // 🔥 Si es pago o aumento actualizamos deuda
+      if (tipo === 'pago') {
+        db.run(
+          `UPDATE clientes SET abono = abono + ? WHERE id=?`,
+          [monto, clienteId]
+        );
+      }
+
+      if (tipo === 'aumento') {
+        db.run(
+          `UPDATE clientes SET deuda = deuda + ? WHERE id=?`,
+          [monto, clienteId]
+        );
+      }
+
+      res.json({ ok: true });
+    }
+  );
 });
 
 /* =========================

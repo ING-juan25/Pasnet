@@ -8,16 +8,13 @@
 </head>
 <body>
 
-<!-- ========================= HEADER ========================= -->
 <div class="clientes-header">
   <h2>📋 Lista de clientes</h2>
   <input type="search" id="buscadorClientes" placeholder="🔍 Buscar cliente...">
 </div>
 
-<!-- ========================= CONTENIDO ========================= -->
 <main class="container">
 
-  <!-- IMPORTAR EXCEL -->
   <h2>📥 Importar clientes desde Excel</h2>
 
   <button id="btnLimpiarClientes" style="background:#c0392b;color:#fff;">
@@ -27,19 +24,20 @@
   <input type="file" id="excelInput" accept=".xlsx,.xls">
   <button id="btnImportarExcel">📥 Importar Excel</button>
 
-  <p style="opacity:.7; font-size:14px;">
-    El Excel debe contener columnas:
-    <b>nombre, telefono, direccion, deuda, fecha_cobro</b>
-  </p>
-
   <hr>
 
-  <!-- LISTA CLIENTES -->
   <section id="listaClientes" class="cards"></section>
+
+  <!-- MODAL GLOBAL -->
+  <div id="globalModal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn">&times;</span>
+      <div id="modal-body"></div>
+    </div>
+  </div>
 
 </main>
 
-<!-- ========================= SCRIPT ========================= -->
 <script>
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -49,140 +47,175 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const lista = document.getElementById('listaClientes');
   const buscador = document.getElementById('buscadorClientes');
-  const btnImportar = document.getElementById('btnImportarExcel');
-  const excelInput = document.getElementById('excelInput');
+  const modal = document.getElementById("globalModal");
+  const modalBody = document.getElementById("modal-body");
+  const closeBtn = document.querySelector(".close-btn");
 
   let clientesCache = [];
+  let clienteActual = null;
+
+  closeBtn.onclick = () => modal.style.display = "none";
+  window.onclick = e => { if (e.target === modal) modal.style.display = "none"; };
 
   /* =========================
      CARGAR CLIENTES
   ========================= */
   async function cargarClientes() {
-    try {
-      const res = await fetch(`${API}/clientes`, {
-        credentials: 'include'
-      });
-
-      if (res.status === 401) {
-        alert('❌ Sesión expirada');
-        location.href = 'login.html';
-        return;
-      }
-
-      clientesCache = await res.json();
-      renderClientes(clientesCache);
-
-    } catch (err) {
-      console.error(err);
-      lista.innerHTML = '<p style="opacity:.7">❌ Error cargando clientes</p>';
-    }
-
-    // 👉 BOTÓN LIMPIAR (CON BLOQUEO PARA NO DUPLICAR LISTENERS)
-    const btnLimpiar = document.getElementById('btnLimpiarClientes');
-
-    if (btnLimpiar && !btnLimpiar.dataset.listener) {
-      btnLimpiar.dataset.listener = 'true';
-
-      btnLimpiar.addEventListener('click', async () => {
-        if (!confirm('⚠️ Esto eliminará TODOS los clientes. ¿Continuar?')) return;
-
-        const res = await fetch(`${API}/clientes/limpiar`, {
-          method: 'DELETE',
-          credentials: 'include'
-        });
-
-        if (!res.ok) {
-          alert('❌ Error limpiando clientes');
-          return;
-        }
-
-        alert('✅ Base de datos limpia');
-        clientesCache = [];
-        renderClientes([]);
-      });
-    }
+    const res = await fetch(`${API}/clientes`, { credentials:'include' });
+    if(res.status === 401) return location.href='login.html';
+    clientesCache = await res.json();
+    renderClientes(clientesCache);
   }
 
   /* =========================
-     RENDER CLIENTES
+     RENDER TARJETAS
   ========================= */
-  function renderClientes(clientes) {
-    lista.innerHTML = '';
-
-    if (!clientes.length) {
-      lista.innerHTML = '<p style="opacity:.6">No hay clientes registrados</p>';
-      return;
-    }
+  function renderClientes(clientes){
+    lista.innerHTML='';
 
     clientes.forEach(c => {
-      const card = document.createElement('div');
-      card.className = 'card';
 
-      card.innerHTML = `
-        <h3>${c.nombre || 'Sin nombre'}</h3>
-        <p>📞 ${c.telefono || 'N/A'}</p>
-        <p>🏠 ${c.direccion || 'N/A'}</p>
-        <p>💰 Deuda: $${c.deuda || 0}</p>
-        <p>📅 Cobro: ${c.fecha_cobro || 'N/A'}</p>
-        <p>📌 Estado: ${c.estado || 'pendiente'}</p>
+      const deuda = Number(c.deuda || 0);
+      const abonado = Number(c.abono || 0);
+      const total = deuda + abonado;
+
+      const porcentaje = total>0
+        ? Math.round((abonado/total)*100)
+        : 100;
+
+      const card = document.createElement('div');
+      card.className='finance-card';
+
+      card.innerHTML=`
+        <div class="card-left">
+          <div class="avatar">${c.nombre[0].toUpperCase()}</div>
+          <div>
+            <h3>${c.nombre}</h3>
+            <small>📅 ${c.fecha_cobro || 'Sin fecha'}</small>
+          </div>
+        </div>
+
+        <div class="card-right">
+          <h2>$${deuda.toLocaleString()}</h2>
+          <small>${porcentaje}% pagado</small>
+        </div>
+
+        <div class="progress-bar">
+          <div class="progress" style="width:${porcentaje}%"></div>
+        </div>
       `;
 
+      card.onclick=()=> abrirVistaDetalle(c);
       lista.appendChild(card);
     });
   }
 
   /* =========================
-     BUSCADOR
+     VISTA DETALLE
   ========================= */
-  buscador.addEventListener('input', e => {
-    const texto = e.target.value.toLowerCase();
+  async function abrirVistaDetalle(cliente){
 
-    const filtrados = clientesCache.filter(c =>
-      (c.nombre || '').toLowerCase().includes(texto) ||
-      (c.telefono || '').includes(texto)
-    );
+    clienteActual = cliente;
 
-    renderClientes(filtrados);
-  });
+    const res = await fetch(`${API}/clientes/${cliente.id}/movimientos`,{
+      credentials:'include'
+    });
+
+    const movimientos = await res.json();
+
+    let historialHTML='';
+
+    movimientos.forEach(m=>{
+      historialHTML+=`
+        <div class="mov-item ${m.tipo}">
+          <strong>${m.tipo.toUpperCase()}</strong>
+          <span>$${Number(m.monto).toLocaleString()}</span>
+          <small>${m.fecha}</small>
+          <p>${m.concepto || ''}</p>
+        </div>
+      `;
+    });
+
+    modalBody.innerHTML=`
+      <h2>${cliente.nombre}</h2>
+
+      <div class="detalle-resumen">
+        <p><strong>Deuda:</strong> $${Number(cliente.deuda).toLocaleString()}</p>
+        <p><strong>Abonado:</strong> $${Number(cliente.abono).toLocaleString()}</p>
+      </div>
+
+      <button onclick="abrirModalMovimiento()">➕ Nuevo Movimiento</button>
+
+      <hr>
+      <h3>Historial</h3>
+      <div class="historial-container">
+        ${historialHTML || '<p style="opacity:.6">Sin movimientos</p>'}
+      </div>
+    `;
+
+    modal.style.display="flex";
+  }
 
   /* =========================
-     IMPORTAR EXCEL
+     MODAL MOVIMIENTO
   ========================= */
-  btnImportar.addEventListener('click', async () => {
-    const file = excelInput.files[0];
+  window.abrirModalMovimiento = function(){
 
-    if (!file) {
-      alert('❌ Selecciona un archivo Excel');
+    modalBody.innerHTML=`
+      <h2>Registrar Movimiento</h2>
+
+      <select id="tipoMovimiento">
+        <option value="pago">Pago</option>
+        <option value="aumento">Aumento deuda</option>
+        <option value="promesa">Promesa</option>
+      </select>
+
+      <input type="number" id="montoMovimiento" placeholder="Monto">
+      <input type="text" id="conceptoMovimiento" placeholder="Concepto">
+      <input type="date" id="fechaMovimiento">
+
+      <button onclick="guardarMovimiento()">Guardar</button>
+    `;
+  }
+
+  /* =========================
+     GUARDAR MOVIMIENTO
+  ========================= */
+  window.guardarMovimiento = async function(){
+
+    const tipo = document.getElementById('tipoMovimiento').value;
+    const monto = Number(document.getElementById('montoMovimiento').value);
+    const concepto = document.getElementById('conceptoMovimiento').value;
+    const fecha = document.getElementById('fechaMovimiento').value;
+
+    if(!fecha){
+      alert("Selecciona una fecha");
       return;
     }
 
-    const formData = new FormData();
-    formData.append('excel', file);
+    await fetch(`${API}/clientes/${clienteActual.id}/movimientos`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      credentials:'include',
+      body:JSON.stringify({tipo,monto,concepto,fecha})
+    });
 
-    try {
-      const res = await fetch(`${API}/clientes/importar`, {
-        method: 'POST',
-        credentials: 'include',
-        body: formData
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-
-      alert(`✅ Clientes importados: ${data.importados}`);
-      cargarClientes();
-
-    } catch (err) {
-      console.error(err);
-      alert('❌ Error importando el Excel');
-    }
-  });
+    modal.style.display="none";
+    cargarClientes();
+  }
 
   /* =========================
-     INIT
+     BUSCADOR
   ========================= */
-  cargarClientes();
+  buscador.oninput=e=>{
+    const t=e.target.value.toLowerCase();
+    renderClientes(clientesCache.filter(c=>
+      c.nombre.toLowerCase().includes(t) ||
+      (c.telefono||'').includes(t)
+    ));
+  };
 
+  cargarClientes();
 });
 </script>
 
