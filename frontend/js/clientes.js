@@ -8,13 +8,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const buscador = document.getElementById('buscadorClientes');
   const btnImportar = document.getElementById('btnImportarExcel');
   const excelInput = document.getElementById('excelInput');
-  
 
   const API = location.hostname === 'localhost'
     ? 'http://localhost:3000'
     : 'https://pasnet-backend.onrender.com';
-
-  console.log('API usada:', API);
 
   let clientesCache = [];
   let clienteActual = null;
@@ -42,7 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   /* =========================
-     RENDER CLIENTES (NUEVO DISEÑO)
+     RENDER CLIENTES
   ========================= */
   function renderClientes(clientes) {
     lista.innerHTML = '';
@@ -56,11 +53,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const deuda = Number(c.deuda || 0);
       const abonado = Number(c.abono || 0);
-      const total = deuda + abonado;
 
-      const porcentaje = total > 0
-        ? Math.min(100, Math.round((abonado / total) * 100))
-        : 100;
+      let porcentaje = 0;
+
+      if (deuda === 0 && abonado > 0) {
+        porcentaje = 100;
+      } else {
+        const total = deuda + abonado;
+        porcentaje = total > 0
+          ? Math.round((abonado / total) * 100)
+          : 0;
+      }
+
+      porcentaje = Math.min(100, porcentaje);
 
       const inicial = (c.nombre || 'N')[0].toUpperCase();
 
@@ -68,18 +73,19 @@ document.addEventListener('DOMContentLoaded', () => {
       card.className = 'finance-card';
 
       card.innerHTML = `
-        <div class="card-left">
-          <div class="avatar">${inicial}</div>
-          <div>
-            <h3>${c.nombre || 'Sin nombre'}</h3>
-            <p>${c.plan || 'Plan base'}</p>
-            <small>📅 ${c.fecha_cobro || 'Sin fecha'}</small>
+        <div class="card-top">
+          <div class="card-left">
+            <div class="avatar">${inicial}</div>
+            <div>
+              <h3>${c.nombre || 'Sin nombre'}</h3>
+              <small>📅 ${c.fecha_cobro || 'Sin fecha'}</small>
+            </div>
           </div>
-        </div>
 
-        <div class="card-right">
-          <h2>$${deuda.toLocaleString()}</h2>
-          <small>${porcentaje}% pagado</small>
+          <div class="card-right">
+            <h2>$${deuda.toLocaleString()}</h2>
+            <small>${porcentaje}% pagado</small>
+          </div>
         </div>
 
         <div class="progress-bar">
@@ -94,7 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   /* =========================
-     MODAL GLOBAL (REUTILIZADO)
+     MODAL
   ========================= */
 
   const modal = document.getElementById("globalModal");
@@ -109,51 +115,80 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function abrirModalPago(cliente) {
 
-  clienteActual = cliente;
+    clienteActual = cliente;
 
-  const deuda = Number(cliente.deuda || 0);
-  const abonado = Number(cliente.abono || 0);
-  const total = deuda + abonado;
+    const deuda = Number(cliente.deuda || 0);
+    const abonado = Number(cliente.abono || 0);
+    const total = deuda + abonado;
+    const hoy = new Date().toISOString().split('T')[0];
 
-  modalBody.innerHTML = `
-    <h2>Nuevo Pago</h2>
+    modalBody.innerHTML = `
+      <h2>Registrar Pago</h2>
 
-    <div style="margin-bottom:15px;">
-      <strong>${cliente.nombre}</strong><br>
-      <small>${cliente.plan || 'Plan base'}</small><br>
-      <small>📅 ${cliente.fecha_cobro || 'Sin fecha'}</small>
-    </div>
+      <div style="margin-bottom:15px;">
+        <strong>${cliente.nombre}</strong><br>
+        <small>📅 ${cliente.fecha_cobro || 'Sin fecha'}</small>
+      </div>
 
-    <div style="margin-bottom:15px;">
-      <p><strong>Restante:</strong> $${deuda.toLocaleString()}</p>
-      <p><strong>Total plan:</strong> $${total.toLocaleString()}</p>
-    </div>
+      <div style="margin-bottom:15px;">
+        <p><strong>Restante:</strong> $${deuda.toLocaleString()}</p>
+        <p><strong>Total plan:</strong> $${total.toLocaleString()}</p>
+      </div>
 
-    <input 
-      type="number" 
-      id="montoPago" 
-      placeholder="Monto recibido"
-      style="width:100%;padding:10px;margin-bottom:10px;"
-    >
+      <input 
+        type="number" 
+        id="montoPago" 
+        placeholder="Monto recibido"
+        style="width:100%;padding:10px;margin-bottom:10px;"
+      >
 
-    <button id="btnGuardarPago">
-      Registrar Pago
-    </button>
-  `;
+      <input
+        type="date"
+        id="fechaPago"
+        max="${hoy}"
+        value="${hoy}"
+        style="width:100%;padding:10px;margin-bottom:15px;"
+      >
 
-  document
-    .getElementById('btnGuardarPago')
-    .addEventListener('click', guardarPago);
+      <button id="btnGuardarPago" style="margin-bottom:20px;">
+        Registrar Pago
+      </button>
 
-  modal.style.display = "flex";
-}
+      <hr style="opacity:.2;margin:15px 0;">
+
+      <h3>Historial</h3>
+      <div id="listaHistorial">
+        Cargando...
+      </div>
+    `;
+
+    document
+      .getElementById('btnGuardarPago')
+      .addEventListener('click', guardarPago);
+
+    modal.style.display = "flex";
+
+    cargarHistorial(cliente.id);
+  }
 
   async function guardarPago() {
 
   const monto = Number(document.getElementById('montoPago').value);
+  const fecha = document.getElementById('fechaPago').value;
+  const hoy = new Date().toISOString().split('T')[0];
 
   if (!monto || monto <= 0) {
     alert('Ingresa un monto válido');
+    return;
+  }
+
+  if (!fecha) {
+    alert('Selecciona una fecha');
+    return;
+  }
+
+  if (fecha > hoy) {
+    alert('No puedes seleccionar una fecha futura');
     return;
   }
 
@@ -162,12 +197,16 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
-  const nuevaDeuda = Math.max(0, clienteActual.deuda - monto);
-  const nuevoAbono = (clienteActual.abono || 0) + monto;
-
   try {
 
-    const res = await fetch(`${API}/clientes/${clienteActual.id}`, {
+    /* =========================
+       1️⃣ ACTUALIZAR DEUDA
+    ========================= */
+
+    const nuevaDeuda = clienteActual.deuda - monto;
+    const nuevoAbono = (clienteActual.abono || 0) + monto;
+
+    const resUpdate = await fetch(`${API}/clientes/${clienteActual.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -177,22 +216,25 @@ document.addEventListener('DOMContentLoaded', () => {
       })
     });
 
-    if (!res.ok) throw new Error();
+    if (!resUpdate.ok) throw new Error();
 
-    // Si quedó en 0 → marcar como pagado
-    if (nuevaDeuda === 0) {
-      await fetch(`${API}/clientes/${clienteActual.id}/pagar`, {
-        method: 'PUT',
-        credentials: 'include'
-      });
-    }
+    /* =========================
+       2️⃣ REGISTRAR MOVIMIENTO
+    ========================= */
+
+    await fetch(`${API}/clientes/${clienteActual.id}/movimientos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        tipo: 'pago',
+        monto,
+        concepto: 'Pago registrado',
+        fecha
+      })
+    });
 
     modal.style.display = "none";
-
-    // 🔥 Actualizar en memoria para que no tengas que recargar
-    clienteActual.deuda = nuevaDeuda;
-    clienteActual.abono = nuevoAbono;
-
     cargarClientes();
 
   } catch (err) {
@@ -200,6 +242,54 @@ document.addEventListener('DOMContentLoaded', () => {
     alert('❌ Error registrando el pago');
   }
 }
+
+  async function cargarHistorial(clienteId) {
+    try {
+
+      const res = await fetch(`${API}/clientes/${clienteId}/movimientos`, {
+        credentials: 'include'
+      });
+
+      const movimientos = await res.json();
+      const contenedor = document.getElementById('listaHistorial');
+
+      if (!movimientos.length) {
+        contenedor.innerHTML =
+          '<p style="opacity:.6">Sin movimientos registrados</p>';
+        return;
+      }
+
+      contenedor.innerHTML = movimientos.map(m => {
+
+        const color =
+          m.tipo === 'pago' ? '#00e676' :
+          m.tipo === 'aumento' ? '#ff5252' :
+          '#ffffff';
+
+        return `
+          <div style="margin-bottom:12px;padding:10px;border-radius:8px;background:rgba(255,255,255,0.05);">
+            <div style="display:flex;justify-content:space-between;">
+              <strong style="color:${color};">
+                ${m.tipo.toUpperCase()}
+              </strong>
+              <span>$${Number(m.monto).toLocaleString()}</span>
+            </div>
+
+            <small style="opacity:.6;">${m.fecha}</small>
+
+            <div style="font-size:13px;margin-top:5px;">
+              ${m.concepto || ''}
+            </div>
+          </div>
+        `;
+
+      }).join('');
+
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
   /* =========================
      BUSCADOR
   ========================= */
@@ -235,8 +325,6 @@ document.addEventListener('DOMContentLoaded', () => {
         body: formData
       });
 
-      if (!res.ok) throw new Error();
-
       const data = await res.json();
       alert(`✅ Clientes importados: ${data.importados || 'OK'}`);
       cargarClientes();
@@ -247,9 +335,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  /* =========================
-     INIT
-  ========================= */
   cargarClientes();
 
 });

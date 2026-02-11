@@ -282,3 +282,13 @@ th {
 #buscadorClientes:focus {
   border-color: #00f7ff;
 }
+
+/* =========================
+   FIX ICONO CALENDARIO DARK MODE
+========================= */
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  opacity: 1;
+  cursor: pointer;
+}

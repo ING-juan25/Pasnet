@@ -198,26 +198,51 @@ app.post('/clientes/:id/movimientos', auth, (req, res) => {
         return res.status(500).json({ error: 'Error guardando movimiento' });
       }
 
-      // 🔥 Si es pago o aumento actualizamos deuda
       if (tipo === 'pago') {
-        db.run(
-          `UPDATE clientes SET abono = abono + ? WHERE id=?`,
-          [monto, clienteId]
-        );
+
+        db.run(`
+          UPDATE clientes
+          SET 
+            abono = abono + ?,
+            deuda = CASE 
+                      WHEN deuda - ? < 0 THEN 0
+                      ELSE deuda - ?
+                    END
+          WHERE id=?
+        `, [monto, monto, monto, clienteId], function (err2) {
+
+          if (err2) {
+            console.error(err2);
+            return res.status(500).json({ error: 'Error actualizando cliente' });
+          }
+
+          // 🔥 Ahora sí verificamos si quedó en 0
+          db.run(`
+            UPDATE clientes
+            SET estado='pagado'
+            WHERE id=? AND deuda <= 0
+          `, [clienteId], function () {
+            res.json({ ok: true });
+          });
+
+        });
+
+        return;
       }
 
       if (tipo === 'aumento') {
         db.run(
           `UPDATE clientes SET deuda = deuda + ? WHERE id=?`,
-          [monto, clienteId]
+          [monto, clienteId],
+          () => res.json({ ok: true })
         );
+        return;
       }
 
       res.json({ ok: true });
     }
   );
 });
-
 /* =========================
    🔥 IMPORTAR CLIENTES DESDE EXCEL (FIX TOTAL)
 ========================= */
