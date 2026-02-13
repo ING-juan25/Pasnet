@@ -2,12 +2,16 @@
    CLIENTES - PASNET
 ========================= */
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
 
   const lista = document.getElementById('listaClientes');
   const buscador = document.getElementById('buscadorClientes');
+
   const btnImportar = document.getElementById('btnImportarExcel');
   const excelInput = document.getElementById('excelInput');
+
+  const filtros = document.querySelectorAll('.filtro-btn');
+  let filtroActivo = 'todos';
 
   const API = location.hostname === 'localhost'
     ? 'http://localhost:3000'
@@ -15,33 +19,92 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let clientesCache = [];
   let clienteActual = null;
+  
+  /* =========================
+     IMPORTAR EXCEL
+  ========================= */
+
+  if (btnImportar && excelInput) {
+
+    btnImportar.addEventListener('click', async (e) => {
+
+      e.preventDefault();
+
+      const file = excelInput.files[0];
+
+      if (!file) {
+        alert('❌ Selecciona un archivo Excel');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('excel', file);
+
+      try {
+
+        btnImportar.disabled = true;
+        btnImportar.innerText = "Importando...";
+
+        const res = await fetch(`${API}/clientes/importar`, {
+          method: 'POST',
+          credentials: 'include',
+          body: formData
+        });
+
+        if (!res.ok) throw new Error();
+
+        const data = await res.json();
+
+        alert(`✅ Clientes importados: ${data.importados}`);
+
+        excelInput.value = "";
+        cargarClientes();
+
+      } catch (err) {
+        console.error(err);
+        alert('❌ Error importando el Excel');
+      } finally {
+        btnImportar.disabled = false;
+        btnImportar.innerText = "Importar Excel";
+      }
+
+    });
+
+  }
 
   /* =========================
      CARGAR CLIENTES
   ========================= */
+
   async function cargarClientes() {
+
     try {
-      const res = await fetch(`${API}/clientes`, { credentials: 'include' });
+
+      const res = await fetch(`${API}/clientes`, {
+        credentials: 'include'
+      });
 
       if (res.status === 401) {
-        alert('❌ Sesión expirada');
         location.href = 'login.html';
         return;
       }
 
       clientesCache = await res.json();
-      renderClientes(clientesCache);
+      aplicarFiltros();
 
     } catch (err) {
       console.error(err);
       lista.innerHTML = '<p style="opacity:.7">❌ Error cargando clientes</p>';
     }
+
   }
 
   /* =========================
      RENDER CLIENTES
   ========================= */
+
   function renderClientes(clientes) {
+
     lista.innerHTML = '';
 
     if (!clientes.length) {
@@ -53,17 +116,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const deuda = Number(c.deuda || 0);
       const abonado = Number(c.abono || 0);
+      const totalPlan = deuda + abonado;
 
-      let porcentaje = 0;
-
-      if (deuda === 0 && abonado > 0) {
-        porcentaje = 100;
-      } else {
-        const total = deuda + abonado;
-        porcentaje = total > 0
-          ? Math.round((abonado / total) * 100)
-          : 0;
-      }
+      let porcentaje = totalPlan > 0
+        ? Math.round((abonado / totalPlan) * 100)
+        : 0;
 
       porcentaje = Math.min(100, porcentaje);
 
@@ -73,19 +130,18 @@ document.addEventListener('DOMContentLoaded', () => {
       card.className = 'finance-card';
 
       card.innerHTML = `
-        <div class="card-top">
-          <div class="card-left">
-            <div class="avatar">${inicial}</div>
-            <div>
-              <h3>${c.nombre || 'Sin nombre'}</h3>
-              <small>📅 ${c.fecha_cobro || 'Sin fecha'}</small>
-            </div>
+        <div class="card-left">
+          <div class="avatar">${inicial}</div>
+          <div>
+            <h3>${c.nombre || 'Sin nombre'}</h3>
+            <p>Plan base</p>
+            <small>📅 ${c.fecha_cobro || 'Sin fecha'}</small>
           </div>
+        </div>
 
-          <div class="card-right">
-            <h2>$${deuda.toLocaleString()}</h2>
-            <small>${porcentaje}% pagado</small>
-          </div>
+        <div class="card-right">
+          <h2>$${deuda.toLocaleString()}</h2>
+          <small>${porcentaje}% pagado</small>
         </div>
 
         <div class="progress-bar">
@@ -96,168 +152,79 @@ document.addEventListener('DOMContentLoaded', () => {
       card.addEventListener('click', () => abrirModalPago(c));
 
       lista.appendChild(card);
+
     });
+
   }
 
   /* =========================
-     MODAL
+     FILTROS
   ========================= */
 
-  const modal = document.getElementById("globalModal");
-  const closeModalBtn = modal.querySelector(".close-btn");
-  const modalBody = document.getElementById("modal-body");
+  filtros.forEach(btn => {
+    btn.addEventListener('click', () => {
 
-  closeModalBtn.onclick = () => modal.style.display = "none";
-  window.onclick = e => { if (e.target === modal) modal.style.display = "none"; };
+      filtros.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
 
-  function abrirModalPago(cliente) {
+      filtroActivo = btn.dataset.filtro;
 
-    clienteActual = cliente;
+      aplicarFiltros();
+    });
+  });
 
-    const deuda = Number(cliente.deuda || 0);
-    const abonado = Number(cliente.abono || 0);
-    const total = deuda + abonado;
-    const hoy = new Date().toISOString().split('T')[0];
+  function aplicarFiltros() {
 
-    modalBody.innerHTML = `
-      <h2>Registrar Pago</h2>
+    let filtrados = [...clientesCache];
 
-      <div style="margin-bottom:15px;">
-        <strong>${cliente.nombre}</strong><br>
-        <small>📅 ${cliente.fecha_cobro || 'Sin fecha'}</small>
-      </div>
+    if (filtroActivo !== 'todos') {
+      filtrados = filtrados.filter(c => c.estado === filtroActivo);
+    }
 
-      <div style="margin-bottom:15px;">
-        <p><strong>Restante:</strong> $${deuda.toLocaleString()}</p>
-        <p><strong>Total plan:</strong> $${total.toLocaleString()}</p>
-      </div>
+    const texto = buscador.value.toLowerCase();
 
-      <input 
-        type="number" 
-        id="montoPago" 
-        placeholder="Monto recibido"
-        style="width:100%;padding:10px;margin-bottom:10px;"
-      >
+    if (texto) {
+      filtrados = filtrados.filter(c =>
+        (c.nombre || '').toLowerCase().includes(texto) ||
+        (c.telefono || '').includes(texto)
+      );
+    }
 
-      <input
-        type="date"
-        id="fechaPago"
-        max="${hoy}"
-        value="${hoy}"
-        style="width:100%;padding:10px;margin-bottom:15px;"
-      >
-
-      <button id="btnGuardarPago" style="margin-bottom:20px;">
-        Registrar Pago
-      </button>
-
-      <hr style="opacity:.2;margin:15px 0;">
-
-      <h3>Historial</h3>
-      <div id="listaHistorial">
-        Cargando...
-      </div>
-    `;
-
-    document
-      .getElementById('btnGuardarPago')
-      .addEventListener('click', guardarPago);
-
-    modal.style.display = "flex";
-    cargarHistorial(cliente.id);
+    renderClientes(filtrados);
   }
 
-  async function guardarPago() {
+  /* =========================
+     BUSCADOR
+  ========================= */
 
-    const monto = Number(document.getElementById('montoPago').value);
-    const fecha = document.getElementById('fechaPago').value;
-    const hoy = new Date().toISOString().split('T')[0];
+  buscador.addEventListener('input', aplicarFiltros);
 
-    if (!monto || monto <= 0) {
-      alert('Ingresa un monto válido');
-      return;
-    }
+  /* =========================
+     INIT
+  ========================= */
 
-    if (!fecha) {
-      alert('Selecciona una fecha');
-      return;
-    }
+  /* =========================
+   INIT (VALIDAR SESIÓN UNA SOLA VEZ)
+========================= */
 
-    if (fecha > hoy) {
-      alert('No puedes seleccionar una fecha futura');
-      return;
-    }
-
-    if (monto > clienteActual.deuda) {
-      alert('El monto no puede ser mayor que la deuda');
-      return;
-    }
-
-    try {
-
-      // 🔥 SOLO registramos movimiento
-      await fetch(`${API}/clientes/${clienteActual.id}/movimientos`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          tipo: 'pago',
-          monto,
-          concepto: 'Pago registrado',
-          fecha
-        })
-      });
-
-      modal.style.display = "none";
-      cargarClientes();
-
-    } catch (err) {
-      console.error(err);
-      alert('❌ Error registrando el pago');
-    }
-  }
-
-  async function cargarHistorial(clienteId) {
-
-    const res = await fetch(`${API}/clientes/${clienteId}/movimientos`, {
+async function verificarSesion() {
+  try {
+    const res = await fetch(`${API}/session`, {
       credentials: 'include'
     });
 
-    const movimientos = await res.json();
-    const contenedor = document.getElementById('listaHistorial');
-
-    if (!movimientos.length) {
-      contenedor.innerHTML =
-        '<p style="opacity:.6">Sin movimientos registrados</p>';
+    if (!res.ok) {
+      window.location.href = 'login.html';
       return;
     }
 
-    contenedor.innerHTML = movimientos.map(m => `
-      <div style="margin-bottom:12px;padding:10px;border-radius:8px;background:rgba(255,255,255,0.05);">
-        <div style="display:flex;justify-content:space-between;">
-          <strong style="color:#00e676;">
-            ${m.tipo.toUpperCase()}
-          </strong>
-          <span>$${Number(m.monto).toLocaleString()}</span>
-        </div>
+    await cargarClientes();
 
-        <small style="opacity:.6;">${m.fecha}</small>
-
-        <div style="font-size:13px;margin-top:5px;">
-          ${m.concepto || ''}
-        </div>
-      </div>
-    `).join('');
+  } catch (err) {
+    window.location.href = 'login.html';
   }
+}
 
-  buscador.addEventListener('input', e => {
-    const texto = e.target.value.toLowerCase();
+verificarSesion();
 
-    renderClientes(clientesCache.filter(c =>
-      (c.nombre || '').toLowerCase().includes(texto) ||
-      (c.telefono || '').includes(texto)
-    ));
-  });
-
-  cargarClientes();
 });

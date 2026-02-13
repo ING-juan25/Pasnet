@@ -76,6 +76,13 @@ app.post('/logout', (req, res) => {
   });
 });
 
+app.get('/session', (req, res) => {
+  if (req.session.auth) {
+    return res.json({ auth: true });
+  }
+  res.status(401).json({ auth: false });
+});
+
 /* =========================
    TABLAS
 ========================= */
