@@ -216,7 +216,6 @@ app.post('/clientes/:id/movimientos', auth, (req, res) => {
             return res.status(500).json({ error: 'Error actualizando cliente' });
           }
 
-          // 🔥 Ahora sí verificamos si quedó en 0
           db.run(`
             UPDATE clientes
             SET estado='pagado'

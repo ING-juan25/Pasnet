@@ -108,10 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const modalBody = document.getElementById("modal-body");
 
   closeModalBtn.onclick = () => modal.style.display = "none";
-
-  window.onclick = e => {
-    if (e.target === modal) modal.style.display = "none";
-  };
+  window.onclick = e => { if (e.target === modal) modal.style.display = "none"; };
 
   function abrirModalPago(cliente) {
 
@@ -167,174 +164,100 @@ document.addEventListener('DOMContentLoaded', () => {
       .addEventListener('click', guardarPago);
 
     modal.style.display = "flex";
-
     cargarHistorial(cliente.id);
   }
 
   async function guardarPago() {
 
-  const monto = Number(document.getElementById('montoPago').value);
-  const fecha = document.getElementById('fechaPago').value;
-  const hoy = new Date().toISOString().split('T')[0];
+    const monto = Number(document.getElementById('montoPago').value);
+    const fecha = document.getElementById('fechaPago').value;
+    const hoy = new Date().toISOString().split('T')[0];
 
-  if (!monto || monto <= 0) {
-    alert('Ingresa un monto válido');
-    return;
-  }
-
-  if (!fecha) {
-    alert('Selecciona una fecha');
-    return;
-  }
-
-  if (fecha > hoy) {
-    alert('No puedes seleccionar una fecha futura');
-    return;
-  }
-
-  if (monto > clienteActual.deuda) {
-    alert('El monto no puede ser mayor que la deuda');
-    return;
-  }
-
-  try {
-
-    /* =========================
-       1️⃣ ACTUALIZAR DEUDA
-    ========================= */
-
-    const nuevaDeuda = clienteActual.deuda - monto;
-    const nuevoAbono = (clienteActual.abono || 0) + monto;
-
-    const resUpdate = await fetch(`${API}/clientes/${clienteActual.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({
-        deuda: nuevaDeuda,
-        abono: nuevoAbono
-      })
-    });
-
-    if (!resUpdate.ok) throw new Error();
-
-    /* =========================
-       2️⃣ REGISTRAR MOVIMIENTO
-    ========================= */
-
-    await fetch(`${API}/clientes/${clienteActual.id}/movimientos`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({
-        tipo: 'pago',
-        monto,
-        concepto: 'Pago registrado',
-        fecha
-      })
-    });
-
-    modal.style.display = "none";
-    cargarClientes();
-
-  } catch (err) {
-    console.error(err);
-    alert('❌ Error registrando el pago');
-  }
-}
-
-  async function cargarHistorial(clienteId) {
-    try {
-
-      const res = await fetch(`${API}/clientes/${clienteId}/movimientos`, {
-        credentials: 'include'
-      });
-
-      const movimientos = await res.json();
-      const contenedor = document.getElementById('listaHistorial');
-
-      if (!movimientos.length) {
-        contenedor.innerHTML =
-          '<p style="opacity:.6">Sin movimientos registrados</p>';
-        return;
-      }
-
-      contenedor.innerHTML = movimientos.map(m => {
-
-        const color =
-          m.tipo === 'pago' ? '#00e676' :
-          m.tipo === 'aumento' ? '#ff5252' :
-          '#ffffff';
-
-        return `
-          <div style="margin-bottom:12px;padding:10px;border-radius:8px;background:rgba(255,255,255,0.05);">
-            <div style="display:flex;justify-content:space-between;">
-              <strong style="color:${color};">
-                ${m.tipo.toUpperCase()}
-              </strong>
-              <span>$${Number(m.monto).toLocaleString()}</span>
-            </div>
-
-            <small style="opacity:.6;">${m.fecha}</small>
-
-            <div style="font-size:13px;margin-top:5px;">
-              ${m.concepto || ''}
-            </div>
-          </div>
-        `;
-
-      }).join('');
-
-    } catch (err) {
-      console.error(err);
-    }
-  }
-
-  /* =========================
-     BUSCADOR
-  ========================= */
-  buscador.addEventListener('input', e => {
-    const texto = e.target.value.toLowerCase();
-
-    const filtrados = clientesCache.filter(c =>
-      (c.nombre || '').toLowerCase().includes(texto) ||
-      (c.telefono || '').includes(texto)
-    );
-
-    renderClientes(filtrados);
-  });
-
-  /* =========================
-     IMPORTAR EXCEL
-  ========================= */
-  btnImportar.addEventListener('click', async () => {
-    const file = excelInput.files[0];
-
-    if (!file) {
-      alert('❌ Selecciona un archivo Excel');
+    if (!monto || monto <= 0) {
+      alert('Ingresa un monto válido');
       return;
     }
 
-    const formData = new FormData();
-    formData.append('excel', file);
+    if (!fecha) {
+      alert('Selecciona una fecha');
+      return;
+    }
+
+    if (fecha > hoy) {
+      alert('No puedes seleccionar una fecha futura');
+      return;
+    }
+
+    if (monto > clienteActual.deuda) {
+      alert('El monto no puede ser mayor que la deuda');
+      return;
+    }
 
     try {
-      const res = await fetch(`${API}/clientes/importar`, {
+
+      // 🔥 SOLO registramos movimiento
+      await fetch(`${API}/clientes/${clienteActual.id}/movimientos`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: formData
+        body: JSON.stringify({
+          tipo: 'pago',
+          monto,
+          concepto: 'Pago registrado',
+          fecha
+        })
       });
 
-      const data = await res.json();
-      alert(`✅ Clientes importados: ${data.importados || 'OK'}`);
+      modal.style.display = "none";
       cargarClientes();
 
     } catch (err) {
       console.error(err);
-      alert('❌ Error importando el Excel');
+      alert('❌ Error registrando el pago');
     }
+  }
+
+  async function cargarHistorial(clienteId) {
+
+    const res = await fetch(`${API}/clientes/${clienteId}/movimientos`, {
+      credentials: 'include'
+    });
+
+    const movimientos = await res.json();
+    const contenedor = document.getElementById('listaHistorial');
+
+    if (!movimientos.length) {
+      contenedor.innerHTML =
+        '<p style="opacity:.6">Sin movimientos registrados</p>';
+      return;
+    }
+
+    contenedor.innerHTML = movimientos.map(m => `
+      <div style="margin-bottom:12px;padding:10px;border-radius:8px;background:rgba(255,255,255,0.05);">
+        <div style="display:flex;justify-content:space-between;">
+          <strong style="color:#00e676;">
+            ${m.tipo.toUpperCase()}
+          </strong>
+          <span>$${Number(m.monto).toLocaleString()}</span>
+        </div>
+
+        <small style="opacity:.6;">${m.fecha}</small>
+
+        <div style="font-size:13px;margin-top:5px;">
+          ${m.concepto || ''}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  buscador.addEventListener('input', e => {
+    const texto = e.target.value.toLowerCase();
+
+    renderClientes(clientesCache.filter(c =>
+      (c.nombre || '').toLowerCase().includes(texto) ||
+      (c.telefono || '').includes(texto)
+    ));
   });
 
   cargarClientes();
-
 });
