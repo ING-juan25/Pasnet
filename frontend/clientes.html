@@ -5,6 +5,8 @@
   <title>Clientes | Pasnet</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="css/admin.css">
+  <link rel="stylesheet" href="css/clientes.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
 
@@ -15,6 +17,9 @@
   <button class="filtro-btn active" data-filtro="todos">Todos</button>
   <button class="filtro-btn" data-filtro="pagado">Pagados</button>
   <button class="filtro-btn" data-filtro="pendiente">Pendientes</button>
+  <button onclick="volverAdmin()" class="btn-volver-icon">
+  <i data-lucide="layout-dashboard"></i>
+</button>
 </div>
 </div>
 
@@ -41,6 +46,13 @@
 
 <!-- 🔥 IMPORTANTE: RUTA CORRECTA -->
 <script src="js/clientes.js"></script>
+<script>
+  lucide.createIcons();
+
+  function volverAdmin() {
+    window.location.href = "admin.html";
+  }
+</script>
 
 </body>
 </html>

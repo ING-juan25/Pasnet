@@ -199,32 +199,174 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   buscador.addEventListener('input', aplicarFiltros);
 
+  /* ============================================================
+     🔥 AQUI AGREGO EL MODAL + HISTORIAL (SIN BORRAR NADA)
+  ============================================================ */
+
+  const modal = document.getElementById("globalModal");
+  const closeModalBtn = modal.querySelector(".close-btn");
+  const modalBody = document.getElementById("modal-body");
+
+  closeModalBtn.onclick = () => modal.style.display = "none";
+
+  window.onclick = e => {
+    if (e.target === modal) modal.style.display = "none";
+  };
+
+  function abrirModalPago(cliente) {
+
+    clienteActual = cliente;
+
+    const deuda = Number(cliente.deuda || 0);
+    const abonado = Number(cliente.abono || 0);
+    const totalPlan = deuda + abonado;
+
+    const hoy = new Date().toISOString().split('T')[0];
+
+    modalBody.innerHTML = `
+      <h2>Registrar Pago</h2>
+
+      <div style="margin-bottom:15px;">
+        <strong>${cliente.nombre}</strong><br>
+        <small>📅 ${cliente.fecha_cobro || 'Sin fecha'}</small>
+      </div>
+
+      <div style="margin-bottom:15px;">
+        <p><strong>Restante:</strong> $${deuda.toLocaleString()}</p>
+        <p><strong>Total plan:</strong> $${totalPlan.toLocaleString()}</p>
+      </div>
+
+      <input 
+        type="number" 
+        id="montoPago" 
+        placeholder="Monto recibido"
+        style="width:100%;padding:10px;margin-bottom:10px;"
+      >
+
+      <input
+        type="date"
+        id="fechaPago"
+        min="${hoy}"
+        max="${hoy}"
+        value="${hoy}"
+        style="width:100%;padding:10px;margin-bottom:15px;"
+>
+
+      <button id="btnGuardarPago">
+        Registrar Pago
+      </button>
+
+      <hr style="margin:20px 0;opacity:.2;">
+
+      <h3>Historial</h3>
+      <div id="listaHistorial"></div>
+    `;
+
+    document
+      .getElementById('btnGuardarPago')
+      .addEventListener('click', guardarPago);
+
+    cargarHistorial(cliente.id);
+
+    modal.style.display = "flex";
+  }
+
+  async function guardarPago() {
+
+    const monto = Number(document.getElementById('montoPago').value);
+    const fecha = document.getElementById('fechaPago').value;
+
+    if (!monto || monto <= 0) {
+      alert('Ingresa un monto válido');
+      return;
+    }
+
+    if (monto > clienteActual.deuda) {
+      alert('El monto no puede ser mayor que la deuda');
+      return;
+    }
+
+    try {
+
+      const res = await fetch(`${API}/clientes/${clienteActual.id}/movimientos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          tipo: 'pago',
+          monto,
+          concepto: 'Pago registrado',
+          fecha
+        })
+      });
+
+      if (!res.ok) throw new Error();
+
+      modal.style.display = "none";
+      await cargarClientes();
+
+    } catch (err) {
+      console.error(err);
+      alert('❌ Error registrando el pago');
+    }
+  }
+
+  async function cargarHistorial(clienteId) {
+
+    try {
+
+      const res = await fetch(`${API}/clientes/${clienteId}/movimientos`, {
+        credentials: 'include'
+      });
+
+      const movimientos = await res.json();
+      const contenedor = document.getElementById('listaHistorial');
+
+      if (!movimientos.length) {
+        contenedor.innerHTML = '<p style="opacity:.6">Sin movimientos</p>';
+        return;
+      }
+
+      contenedor.innerHTML = movimientos.map(m => `
+        <div class="historial-card ${m.tipo}">
+          <div class="historial-left">
+            <div class="historial-tipo">${m.tipo.toUpperCase()}</div>
+            <div class="historial-fecha">${m.fecha}</div>
+            <div class="historial-concepto">${m.concepto || ''}</div>
+          </div>
+          <div class="historial-monto">
+            $${Number(m.monto).toLocaleString()}
+          </div>
+        </div>
+      `).join('');
+
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
   /* =========================
      INIT
   ========================= */
 
-  /* =========================
-   INIT (VALIDAR SESIÓN UNA SOLA VEZ)
-========================= */
+  async function verificarSesion() {
+    try {
+      const res = await fetch(`${API}/session`, {
+        credentials: 'include'
+      });
 
-async function verificarSesion() {
-  try {
-    const res = await fetch(`${API}/session`, {
-      credentials: 'include'
-    });
+      if (!res.ok) {
+        window.location.href = 'login.html';
+        return;
+      }
 
-    if (!res.ok) {
+      await cargarClientes();
+
+    } catch (err) {
       window.location.href = 'login.html';
-      return;
     }
-
-    await cargarClientes();
-
-  } catch (err) {
-    window.location.href = 'login.html';
   }
-}
 
-verificarSesion();
+  verificarSesion();
 
 });
